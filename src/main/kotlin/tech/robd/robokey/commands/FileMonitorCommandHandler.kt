@@ -18,7 +18,6 @@
 package tech.robd.robokey.commands
 
 import kotlinx.coroutines.*
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import tech.robd.robokey.*
 import tech.robd.robokey.tasks.TaskPoolManager

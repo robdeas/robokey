@@ -244,31 +244,33 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
         val buffer = ByteArray(1024)
         val stringBuilder = StringBuilder()
         try {
-            while (true) {
-                val bytesRead = `in`?.read(buffer) ?: -1
-                if (bytesRead > 0) {
-                    val response = String(buffer, 0, bytesRead)
-                    stringBuilder.append(response)
+            withContext(Dispatchers.IO) {
+                while (true) {
+                    val bytesRead = `in`?.read(buffer) ?: -1
+                    if (bytesRead > 0) {
+                        val response = String(buffer, 0, bytesRead)
+                        stringBuilder.append(response)
 
-                    var lineEndIndex: Int
-                    while (stringBuilder.indexOf("\n").also { lineEndIndex = it } != -1) {
-                        val line = stringBuilder.substring(0, lineEndIndex).trim()
-                        stringBuilder.delete(0, lineEndIndex + 1)  // Remove the processed line
+                        var lineEndIndex: Int
+                        while (stringBuilder.indexOf("\n").also { lineEndIndex = it } != -1) {
+                            val line = stringBuilder.substring(0, lineEndIndex).trim()
+                            stringBuilder.delete(0, lineEndIndex + 1)  // Remove the processed line
 
-                        synchronized(System.out) {
-                            log.info("Received from Arduino: $line")
-                            System.out.flush()
+                            synchronized(System.out) {
+                                log.info("Received from Arduino: $line")
+                                System.out.flush()
+                            }
+
+                            // Parse the response to check the ready status
+                            if (line.contains("\"ready\": \"yes\"", ignoreCase = true)) {
+                                isBusy = false
+                            } else if (line.contains("\"ready\": \"no\"", ignoreCase = true)) {
+                                isBusy = true
+                            }
                         }
-
-                        // Parse the response to check the ready status
-                        if (line.contains("\"ready\": \"yes\"", ignoreCase = true)) {
-                            isBusy = false
-                        } else if (line.contains("\"ready\": \"no\"", ignoreCase = true)) {
-                            isBusy = true
-                        }
+                    } else if (bytesRead == -1) {
+                        break  // End of stream reached
                     }
-                } else if (bytesRead == -1) {
-                    break  // End of stream reached
                 }
             }
         } catch (e: IOException) {
@@ -277,7 +279,9 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
             log.info("Unexpected error: ${e.message}")
         } finally {
             try {
-                `in`?.close()
+                withContext(Dispatchers.IO) {
+                    `in`?.close()
+                }
             } catch (e: IOException) {
                 log.info("Error closing input stream: ${e.message}")
             }
