@@ -241,10 +241,10 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      * to the system via the `Robot`. It handles system states such as pause and stop, and only processes commands
      * if the system is active.
      *
-     * @param lines A list of commands to process.
+     * @param commands A list of commands to process.
      */
-    override suspend fun sendCommandData(lines: List<String>) {
-        lines.forEach { line ->
+    override suspend fun sendCommandData(commands: List<String>) {
+        commands.forEach { line ->
             val lowerCaseLine = line.lowercase()
 
             // Don't process commands if paused

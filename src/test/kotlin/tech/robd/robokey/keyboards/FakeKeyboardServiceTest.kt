@@ -39,37 +39,41 @@ class FakeKeyboardServiceTest {
 
     @Test
     fun `test logRawDataToFile creates file and writes lines`() {
-        val testFilePath = "test-log/test-log.txt"
+
         val testLines = listOf("line1", "line2", "line3")
 
-        ensureFileAndParentDirsDoNotExist(testFilePath)
+        ensureFileAndParentDirsDoNotExist()
 
-        StepVerifier.create(fakeKeyboardService.logRawDataToFile(testFilePath, testLines))
+        StepVerifier.create(fakeKeyboardService.logRawDataToFile(TEST_FILE_PATH, testLines))
             .verifyComplete()
 
-        verifyFileContent(testFilePath, testLines)
+        verifyFileContent( testLines)
 
-        cleanUpTestFiles(testFilePath)
+        cleanUpTestFiles()
     }
 
-    private fun ensureFileAndParentDirsDoNotExist(filePath: String) {
-        val testFile = File(filePath)
+    private fun ensureFileAndParentDirsDoNotExist() {
+        val testFile = File(Companion.TEST_FILE_PATH)
         if (testFile.exists()) {
             testFile.delete()
         }
         testFile.parentFile?.deleteRecursively()
     }
 
-    private fun verifyFileContent(filePath: String, expectedLines: List<String>) {
-        val testFile = File(filePath)
+    private fun verifyFileContent(expectedLines: List<String>) {
+        val testFile = File(Companion.TEST_FILE_PATH)
         assert(testFile.exists())
         val fileContent = testFile.readLines()
         assert(fileContent == expectedLines)
     }
 
-    private fun cleanUpTestFiles(filePath: String) {
-        val testFile = File(filePath)
+    private fun cleanUpTestFiles() {
+        val testFile = File(Companion.TEST_FILE_PATH)
         testFile.delete()
         testFile.parentFile?.deleteRecursively()
+    }
+
+    companion object {
+        private const val TEST_FILE_PATH = "test-log/test-log.txt"
     }
 }
