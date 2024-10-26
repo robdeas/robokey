@@ -81,7 +81,7 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
             "\\R" to KeyEvent.VK_ENTER,
             "\\B" to KeyEvent.VK_BACK_SPACE,
             // Additional key mappings here...
-            "ENTER" to KeyEvent.VK_ENTER,
+            "RETURN" to KeyEvent.VK_ENTER,
             "UP" to KeyEvent.VK_UP,
             "DOWN" to KeyEvent.VK_DOWN,
             "LEFT" to KeyEvent.VK_LEFT,
