@@ -113,6 +113,6 @@ class SystemExitHandler(
 
     private fun stopFileWatchers() {
         log.info("Stopping file watchers...")
-        // TODO logic to stop file watching threads goes here
+        // file watchers should actually already have been shutdown at this point
     }
 }

@@ -84,7 +84,7 @@ data class AppConfig(
  */
 data class KeyboardConfig(
     var output: Boolean = true,
-    var initialDelay: Long = 2000, // TODO shrink it in final code
+    var initialDelay: Long = 2000,
     val allJitter: Boolean = true,
     val uiExtraDelay: Boolean = true,
     val useBusyState: Boolean = true,
