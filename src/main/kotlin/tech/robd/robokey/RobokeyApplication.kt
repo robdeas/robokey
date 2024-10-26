@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory
  * @param taskPoolManager The manager responsible for task execution and lifecycle.
  */
 @SpringBootApplication
-open class RobokeyApplication(
+class RobokeyApplication(
     val appConfig: AppConfig,
     private val swingMainWindow: SwingMainWindow,
     private val consoleCommandHandler: ConsoleCommandHandler,
@@ -73,7 +73,7 @@ open class RobokeyApplication(
      * @return An `ApplicationRunner` that is executed on application startup.
      */
     @Bean
-    open fun runOnStartup() = ApplicationRunner {
+    fun runOnStartup() = ApplicationRunner {
 
         log.info("Application starting up...")
 

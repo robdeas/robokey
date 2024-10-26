@@ -20,7 +20,6 @@ package tech.robd.robokey.commands
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import tech.robd.robokey.AppConfig
 import tech.robd.robokey.Logable

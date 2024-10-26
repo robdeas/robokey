@@ -24,7 +24,6 @@ import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Component
 import org.springframework.util.FileCopyUtils
 import kotlinx.coroutines.*
-import org.slf4j.LoggerFactory
 import tech.robd.robokey.Logable
 import tech.robd.robokey.SystemExitHandler
 import tech.robd.robokey.setupLogs

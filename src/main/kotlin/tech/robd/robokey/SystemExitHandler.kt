@@ -54,9 +54,6 @@ class SystemExitHandler(
 
     }
 
-    fun exit() {
-        shutdown(0)
-    }
 
     private fun shutdown(status: Int) {
         try {

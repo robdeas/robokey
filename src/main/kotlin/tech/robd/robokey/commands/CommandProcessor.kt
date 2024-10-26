@@ -220,7 +220,7 @@ class CommandProcessor(
     /**
      * Clears the command queue by discarding all queued commands.
      */
-    private suspend fun clearCommandQueue() {
+    private fun clearCommandQueue() {
         while (true) {
             val result = commandChannel.tryReceive()
             if (result.isSuccess) {

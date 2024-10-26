@@ -22,7 +22,6 @@ import com.formdev.flatlaf.FlatDarkLaf
 import tech.robd.robokey.keyboards.LocalRobotKeyboardService.Companion.keyMap
 import org.springframework.stereotype.Component
 import kotlinx.coroutines.*
-import org.slf4j.LoggerFactory
 import tech.robd.robokey.commands.CommandProcessorService
 import javax.swing.*
 import java.awt.*

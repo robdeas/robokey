@@ -45,7 +45,6 @@ class FileMonitorCommandHandler(
     private val commandProcessorService: CommandProcessorService,
     private val systemExitHandler: SystemExitHandler,
 ) {
-    private val logger = LoggerFactory.getLogger(FileMonitorCommandHandler::class.java)
 
     companion object : Logable {
         private val log = setupLogs
