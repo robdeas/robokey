@@ -1,4 +1,3 @@
-# application.yaml
 spring:
   application:
     name: robokey
@@ -7,36 +6,39 @@ server:
   error:
     whitelabel:
       enabled: false
-app: # You can edit these settings, but be careful, a rogue keyboard can cause chaos
-  consoleCommands: true # can be used to turn off the console command processor
-  gui: true # enable the gui window, if false its hidden
-  darkMode: false
+
+app:
+  console-commands: true  # Can be used to turn off the console command processor
+  gui: true  # Enable the GUI window; if false, it's hidden
+  dark-mode: false
   mode: PHYSICAL  # Options: PHYSICAL, LOCAL, LOG
-  comPort: COM3  # Required if mode is PHYSICAL/HARDWARE
-  logFilePath: logs/dummy.log  # Required if mode is LOG
-  keyboard: # keyboard settings only apply to physical keyboards
-    allJitter: true # note the jitter values will only be applied to the physical keyboard type
-    output: true # If false and using a local keyboard, keystrokes will just be logged
-    uiExtraDelay: true # use an extra initial delay when the gui is used, it will always do this for a local keyboard
-    initialDelay: 3000 # sets an initial delay to allow the cursor to be moved to the correct place when used locally, used by physical keyboards
-    useBusyState: true # dont send data to the arduino untill it sends a status not busy message
-    press: # ignored for local (AWT Robot) keyboards
+  com-port: COM3  # Required if mode is PHYSICAL/HARDWARE
+  log-file-path: logs/dummy.log  # Required if mode is LOG
+  debug: true
+  keyboard:
+    output: true  # If false and using a local keyboard, keystrokes will just be logged
+    initial-delay: 3000  # Sets an initial delay for cursor positioning when used locally
+    all-jitter: true  # Jitter values only apply to the physical keyboard type
+    ui-extra-delay: true  # Use an extra initial delay when the GUI is used
+    use-busy-state: true  # Don't send data to the Arduino until it sends a "not busy" status
+    press:
       jitter: false
-      jitterMax: 100
+      jitter-max: 100
       time: 100
-    delay: # ignored for local (AWT Robot) keyboards
+    interval:
       jitter: false
-      jitterMax: 500
+      jitter-max: 500
       time: 300
-  fileWatcher:
+  file-watcher:
     enabled: true
-    winfilePath: "C:\\data\\robo_keyboard_commands.txt"
-    posixFilePath: /tmp/robo_keyboard_commands.txt
-    createFile: true # create the file if it doesnt exist
-    charset: UTF-8 # auto tries to guess the charset from the file, either auto or the name of the charset.
-    fallBackCharset: UTF-8 # if auto or invalid will use os defaults of  UFF-8
-logger:
-  levels:
+    win-file-path: "C:\\data\\robo_keyboard_commands.txt"
+    posix-file-path: /tmp/robo_keyboard_commands.txt
+    create-file: true
+    charset: UTF-8
+    fall-back-charset: UTF-8
+
+logging:
+  level:
     io.micronaut: DEBUG
     org.hibernate: DEBUG
     io.micronaut.data: DEBUG
