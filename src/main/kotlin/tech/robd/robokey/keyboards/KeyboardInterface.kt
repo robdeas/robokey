@@ -22,7 +22,6 @@ package tech.robd.robokey.keyboards
  * This interface is implemented by services that send commands to either a local or remote keyboard.
  */
 interface KeyboardInterface {
-
     /**
      * Sends a list of commands to the keyboard.
      * This function is typically asynchronous and will execute the commands as they are provided.

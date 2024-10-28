@@ -68,6 +68,7 @@ data class AppConfig(
     var fileWatcher: FileWatcher = FileWatcher(),
     val keyboard: KeyboardConfig = KeyboardConfig(),
 )
+
 /**
  * Configuration class for keyboard settings.
  *
@@ -89,7 +90,7 @@ data class KeyboardConfig(
     val uiExtraDelay: Boolean = true,
     val useBusyState: Boolean = true,
     val press: KeyboardKeyPressConfig = KeyboardKeyPressConfig(),
-    val interval: KeyboardKeyIntervalConfig = KeyboardKeyIntervalConfig()
+    val interval: KeyboardKeyIntervalConfig = KeyboardKeyIntervalConfig(),
 )
 
 /**
@@ -141,5 +142,4 @@ data class FileWatcher(
     var createFile: Boolean = true,
     var charset: String = "AUTO",
     var fallBackCharset: String = "AUTO",
-
 )

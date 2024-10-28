@@ -41,7 +41,7 @@ import tech.robd.robokey.setupLogs
 class CommandProcessorService(
     private val arduinoService: ArduinoService?,
     private val localRobotKeyboardService: LocalRobotKeyboardService?,
-    private val appConfig: AppConfig
+    private val appConfig: AppConfig,
 ) {
     companion object : Logable {
         private val log = setupLogs
@@ -51,20 +51,22 @@ class CommandProcessorService(
     private val keyboardService by lazy { getCommandProcessor() }
 
     // Command processor for local keyboard
-    private val localCommandProcessor = localRobotKeyboardService?.let {
-        CommandProcessor(
-            keyboardService = it,
-            appConfig = appConfig
-        )
-    }
+    private val localCommandProcessor =
+        localRobotKeyboardService?.let {
+            CommandProcessor(
+                keyboardService = it,
+                appConfig = appConfig,
+            )
+        }
 
     // Command processor for Arduino
-    private val arduinoCommandProcessor = arduinoService?.let {
-        CommandProcessor(
-            keyboardService = it,
-            appConfig = appConfig
-        )
-    }
+    private val arduinoCommandProcessor =
+        arduinoService?.let {
+            CommandProcessor(
+                keyboardService = it,
+                appConfig = appConfig,
+            )
+        }
 
     // Coroutine scope for command processing, tied to the service's lifecycle
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -133,36 +135,38 @@ class CommandProcessorService(
      *
      * @return The selected CommandProcessor based on the current mode.
      */
-    fun getCommandProcessor(): CommandProcessor {
-        return when (appConfig.mode.uppercase()) {
-            "HARDWARE", "PHYSICAL" -> arduinoCommandProcessor
-                ?: throw IllegalStateException("ArduinoService is not available.")
+    fun getCommandProcessor(): CommandProcessor =
+        when (appConfig.mode.uppercase()) {
+            "HARDWARE", "PHYSICAL" ->
+                arduinoCommandProcessor
+                    ?: throw IllegalStateException("ArduinoService is not available.")
 
-            "VIRTUAL", "LOCAL" -> localCommandProcessor
-                ?: throw IllegalStateException("LocalRobotKeyboardService is not available.")
+            "VIRTUAL", "LOCAL" ->
+                localCommandProcessor
+                    ?: throw IllegalStateException("LocalRobotKeyboardService is not available.")
 
             "DUMMY", "LOG" -> {
                 // Return a dummy processor for logging or testing purposes
-                val dummyKeyboardService = object : KeyboardInterface {
-                    override suspend fun sendCommandData(commands: List<String>) {
-                        log.info("DummyKeyboardService received commands: $commands")
-                    }
+                val dummyKeyboardService =
+                    object : KeyboardInterface {
+                        override suspend fun sendCommandData(commands: List<String>) {
+                            log.info("DummyKeyboardService received commands: $commands")
+                        }
 
-                    override suspend fun stopAndClearQueue() {
-                        log.info("DummyKeyboardService stopAndClearQueue called")
-                    }
+                        override suspend fun stopAndClearQueue() {
+                            log.info("DummyKeyboardService stopAndClearQueue called")
+                        }
 
-                    override suspend fun resume() {
-                        log.info("DummyKeyboardService resume called")
+                        override suspend fun resume() {
+                            log.info("DummyKeyboardService resume called")
+                        }
                     }
-                }
                 CommandProcessor(
                     keyboardService = dummyKeyboardService,
-                    appConfig = appConfig
+                    appConfig = appConfig,
                 )
             }
 
             else -> throw IllegalStateException("Unknown config mode: ${appConfig.mode}")
         }
-    }
 }

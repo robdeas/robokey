@@ -17,7 +17,10 @@
  */
 package tech.robd.robokey.tasks
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * A task that can be started, canceled, or restarted, and managed through coroutines.
@@ -35,7 +38,10 @@ import kotlinx.coroutines.*
  * @param name A unique name for the task, typically used for logging or tracking purposes.
  * @param task The suspending function representing the actual task logic that will be run asynchronously.
  */
-class NamedCancellableTask(val name: TaskName, val task: suspend () -> Unit) {
+class NamedCancellableTask(
+    val name: TaskName,
+    val task: suspend () -> Unit,
+) {
     /**
      * The [Job] associated with the coroutine that executes the task.
      *
@@ -60,18 +66,19 @@ class NamedCancellableTask(val name: TaskName, val task: suspend () -> Unit) {
      */
     fun start(scope: CoroutineScope) {
         // Launches a new coroutine within the provided scope
-        job = scope.launch {
-            // Timeout set to 5 seconds; can be customized for different tasks
-            withTimeoutOrNull(5000L) {
-                try {
-                    // Execute the suspending task
-                    task()
-                } catch (e: Exception) {
-                    // Log any exceptions thrown during task execution
-                    println("Task $name failed with exception: $e")
-                }
-            } ?: println("Task $name timed out.")  // Log when task times out
-        }
+        job =
+            scope.launch {
+                // Timeout set to 5 seconds; can be customized for different tasks
+                withTimeoutOrNull(5000L) {
+                    try {
+                        // Execute the suspending task
+                        task()
+                    } catch (e: Exception) {
+                        // Log any exceptions thrown during task execution
+                        println("Task $name failed with exception: $e")
+                    }
+                } ?: println("Task $name timed out.") // Log when task times out
+            }
     }
 
     /**
@@ -81,7 +88,7 @@ class NamedCancellableTask(val name: TaskName, val task: suspend () -> Unit) {
      * stop execution immediately. If there is no running task, the function does nothing.
      */
     fun cancel() {
-        job?.cancel()  // Cancel the job if it's currently running
+        job?.cancel() // Cancel the job if it's currently running
     }
 
     /**
@@ -93,8 +100,8 @@ class NamedCancellableTask(val name: TaskName, val task: suspend () -> Unit) {
      * @param scope The [CoroutineScope] in which the new task will be launched.
      */
     fun restart(scope: CoroutineScope) {
-        cancel()  // Cancel the current task if it exists
-        start(scope)  // Start a new task
+        cancel() // Cancel the current task if it exists
+        start(scope) // Start a new task
     }
 
     /**

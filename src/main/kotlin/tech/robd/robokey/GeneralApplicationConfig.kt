@@ -33,9 +33,8 @@ import tech.robd.robokey.commands.CommandProcessorService
  */
 @Configuration
 class GeneralApplicationConfig(
-    private val commandProcessorService: CommandProcessorService
+    private val commandProcessorService: CommandProcessorService,
 ) {
-
     /**
      * Provides a `CommandProcessor` bean.
      *
@@ -46,7 +45,5 @@ class GeneralApplicationConfig(
      * @return The `CommandProcessor` instance, managed by Spring as a bean.
      */
     @Bean
-    fun commandProcessor(): CommandProcessor {
-        return commandProcessorService.getCommandProcessor()
-    }
+    fun commandProcessor(): CommandProcessor = commandProcessorService.getCommandProcessor()
 }

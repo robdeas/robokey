@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.  
  */
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package tech.robd.robokey.commands
 
 import kotlinx.coroutines.*
@@ -43,7 +45,7 @@ import tech.robd.robokey.setupLogs
  */
 class CommandProcessor(
     internal val keyboardService: KeyboardInterface,
-    private val appConfig: AppConfig
+    private val appConfig: AppConfig,
 ) {
     companion object : Logable {
         private val log = setupLogs
@@ -126,16 +128,18 @@ class CommandProcessor(
         }
 
         // Assign timeouts based on command type
-        val commandTimeout = when {
-            command.startsWith("CMD_SET_PRESS_LENGTH") -> 1000L
-            command.startsWith("lorem") -> 5000L // Longer timeout for large text
-            else -> 3000L
-        }
+        val commandTimeout =
+            when {
+                command.startsWith("CMD_SET_PRESS_LENGTH") -> 1000L
+                command.startsWith("lorem") -> 5000L // Longer timeout for large text
+                else -> 3000L
+            }
 
         try {
             val arduinoCommand = ArduinoCommand(command, commandTimeout)
             log.debug("Sending command to keyboard with timeout [$commandTimeout]: $command")
-            (keyboardService as? ArduinoService)?.sendRawDataToArduino(appConfig.comPort!!, listOf(arduinoCommand))
+            (keyboardService as? ArduinoService)
+                ?.sendRawDataToArduino(appConfig.comPort!!, listOf(arduinoCommand))
                 ?.awaitSingleOrNull()
             log.info("Command successfully sent: $command")
         } catch (e: Exception) {
@@ -172,7 +176,8 @@ class CommandProcessor(
                         log.info("Sending reset command to Arduino.")
                         try {
                             val resetCommand = ArduinoCommand("CMD:RESET", 1000)
-                            keyboardService.sendRawDataToArduino(appConfig.comPort!!, listOf(resetCommand))
+                            keyboardService
+                                .sendRawDataToArduino(appConfig.comPort!!, listOf(resetCommand))
                                 .awaitSingleOrNull()
                             log.info("Reset command successfully sent to Arduino.")
                         } catch (e: Exception) {
@@ -203,7 +208,7 @@ class CommandProcessor(
                 log.info("Pausing operation.")
                 isPaused = true
                 if (keyboardService is ArduinoService) {
-                    val pauseCommand = ArduinoCommand("CMD:PAUSE", 1000)  // Send pause command to Arduino
+                    val pauseCommand = ArduinoCommand("CMD:PAUSE", 1000) // Send pause command to Arduino
                     keyboardService.sendRawDataToArduino(appConfig.comPort!!, listOf(pauseCommand)).awaitSingleOrNull()
                     log.info("Pause command successfully sent to Arduino.")
                 }
@@ -241,7 +246,9 @@ class CommandProcessor(
         isStopped = stopped
         if (stopped) {
             if (keyboardService is ArduinoService) {
-                log.info("Arduino service needs to stop. (It will only handle priority commands to allow the Arduino to receive the stop command.)")
+                log.info(
+                    "Arduino service needs to stop. (It will only handle priority commands to allow the Arduino to receive the stop command.)",
+                )
             }
             keyboardService.stopAndClearQueue()
         } else {
@@ -260,5 +267,6 @@ class CommandProcessor(
 
     // Utility functions to check the type of keyboard service in use
     fun isUsingArduino() = keyboardService is ArduinoService
+
     fun isUsingLocalRobot() = keyboardService is LocalRobotKeyboardService
 }

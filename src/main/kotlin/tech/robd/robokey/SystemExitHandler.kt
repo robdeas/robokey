@@ -30,11 +30,10 @@ import javax.swing.SwingUtilities
 
 @Component
 class SystemExitHandler(
-    private val context: ApplicationContext,  // Spring application context
-    private val coroutineScope: CoroutineScope,  //  global coroutine scope
-    private val taskPoolManager: TaskPoolManager // Thread pool used for tasks
+    private val context: ApplicationContext, // Spring application context
+    private val coroutineScope: CoroutineScope, //  global coroutine scope
+    private val taskPoolManager: TaskPoolManager, // Thread pool used for tasks
 ) {
-
     companion object : Logable {
         private val log = setupLogs
     }
@@ -51,9 +50,7 @@ class SystemExitHandler(
         for (thread in threadSet) {
             log.info("Thread: ${thread.name}, Daemon: ${thread.isDaemon}, State: ${thread.state}")
         }
-
     }
-
 
     private fun shutdown(status: Int) {
         try {
@@ -71,7 +68,6 @@ class SystemExitHandler(
 
             // 5. Stop file watchers
             stopFileWatchers()
-
         } catch (e: Exception) {
             log.info("Error during shutdown: ${e.message}")
         } finally {
@@ -103,7 +99,7 @@ class SystemExitHandler(
         SwingUtilities.invokeLater {
             val frames = Frame.getFrames()
             for (frame in frames) {
-                frame.dispose()  // Close all open windows
+                frame.dispose() // Close all open windows
             }
         }
     }

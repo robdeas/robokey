@@ -34,7 +34,9 @@ import java.nio.file.Paths
  * @param appConfig The application configuration that contains settings like the log file path.
  */
 @Service
-class FakeKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
+class FakeKeyboardService(
+    val appConfig: AppConfig,
+) : KeyboardInterface {
     companion object : Logable {
         private val log = setupLogs
     }
@@ -50,25 +52,28 @@ class FakeKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      * @param lines The list of strings to be logged to the file.
      * @return A Mono that completes when the file has been written.
      */
-    private fun sendLogData(filePath: String, lines: List<String>): Mono<Void> {
-        return Mono.fromCallable {
-            val file = File(filePath)
+    private fun sendLogData(
+        filePath: String,
+        lines: List<String>,
+    ): Mono<Void> {
+        return Mono
+            .fromCallable {
+                val file = File(filePath)
 
-            // Ensure parent directories exist
-            Files.createDirectories(Paths.get(file.parent))
+                // Ensure parent directories exist
+                Files.createDirectories(Paths.get(file.parent))
 
-            // Write lines to file
-            file.bufferedWriter().use { writer ->
-                for (line in lines) {
-                    writer.write(line)
-                    writer.newLine()
+                // Write lines to file
+                file.bufferedWriter().use { writer ->
+                    for (line in lines) {
+                        writer.write(line)
+                        writer.newLine()
+                    }
                 }
-            }
-            log.info("Logged lines to $filePath")
-        }
-            .doOnError { e -> log.info("Error logging data to file: ${e.message}") }
-            .subscribeOn(Schedulers.boundedElastic())  // Ensure file IO happens on a boundedElastic thread pool
-            .then()  // Return Mono<Void> to signal completion
+                log.info("Logged lines to $filePath")
+            }.doOnError { e -> log.info("Error logging data to file: ${e.message}") }
+            .subscribeOn(Schedulers.boundedElastic()) // Ensure file IO happens on a boundedElastic thread pool
+            .then() // Return Mono<Void> to signal completion
     }
 
     /**
@@ -78,9 +83,10 @@ class FakeKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      * @param lines The list of strings to log.
      * @return A Mono that completes after the data has been logged.
      */
-    fun logRawDataToFile(filePath: String, lines: List<String>): Mono<Void> {
-        return sendLogData(filePath, lines)
-    }
+    fun logRawDataToFile(
+        filePath: String,
+        lines: List<String>,
+    ): Mono<Void> = sendLogData(filePath, lines)
 
     /**
      * Sends a list of commands by logging them to the file specified in the appConfig.
@@ -90,7 +96,7 @@ class FakeKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      */
     override suspend fun sendCommandData(commands: List<String>) {
         appConfig.logFilePath?.let { filePath ->
-            logRawDataToFile(filePath, commands).subscribe()  // Subscribe to ensure the operation is executed
+            logRawDataToFile(filePath, commands).subscribe() // Subscribe to ensure the operation is executed
         }
     }
 

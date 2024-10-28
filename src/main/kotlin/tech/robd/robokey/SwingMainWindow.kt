@@ -15,33 +15,40 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.  
  */
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package tech.robd.robokey
 
-import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.FlatDarkLaf
-import tech.robd.robokey.keyboards.LocalRobotKeyboardService.Companion.keyMap
+import com.formdev.flatlaf.FlatLightLaf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.springframework.stereotype.Component
-import kotlinx.coroutines.*
 import tech.robd.robokey.commands.CommandProcessorService
-import javax.swing.*
-import java.awt.*
+import tech.robd.robokey.keyboards.LocalRobotKeyboardService.Companion.keyMap
+import java.awt.BorderLayout
+import java.awt.CardLayout
+import java.awt.FlowLayout
+import java.awt.event.ItemEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
-import java.awt.event.ItemEvent
+import javax.swing.*
 import kotlin.concurrent.thread
+
 @Component
 class SwingMainWindow(
     val appConfig: AppConfig,
     private val commandProcessorService: CommandProcessorService,
     private val systemExitHandler: SystemExitHandler,
-    private val coroutineScope: CoroutineScope
-
+    private val coroutineScope: CoroutineScope,
 ) {
     companion object : Logable {
         private val log = setupLogs
     }
 
-    private var isPaused = false  // Track if the system is paused
+    private var isPaused = false // Track if the system is paused
     private lateinit var cardLayout: CardLayout
     private lateinit var contentPanel: JPanel
 
@@ -51,15 +58,16 @@ class SwingMainWindow(
         helpPanel.layout = BorderLayout()
 
         // Help text area
-        val helpText = JTextArea(
-            """
+        val helpText =
+            JTextArea(
+                """
             RoboKey Help:
             - To send a key, select the key from the dropdown and click 'Send Key'.
             - To send text, type in the text area and click 'Send Text'.
             - Use the Pause/Resume/Stop buttons to control the keyboard commands.
             - The Reset button is available for physical or hardware modes.
-            """
-        )
+            """,
+            )
         helpText.isEditable = false
         helpText.lineWrap = true
         helpText.wrapStyleWord = true
@@ -88,12 +96,13 @@ class SwingMainWindow(
         helpPanel.layout = BorderLayout()
 
         // Help text area
-        val helpText = JTextArea(
-            """
+        val helpText =
+            JTextArea(
+                """
             RoboKey Settings:
             nothing is currently configurable here
-            """
-        )
+            """,
+            )
         helpText.isEditable = false
         helpText.lineWrap = true
         helpText.wrapStyleWord = true
@@ -115,7 +124,6 @@ class SwingMainWindow(
 
         return helpPanel
     }
-
 
     fun createAndShowGUI() {
         SwingUtilities.invokeLater {
@@ -140,7 +148,7 @@ class SwingMainWindow(
             val exitMenuItem = JMenuItem("Exit")
             exitMenuItem.addActionListener {
                 // Exit the application
-                commandProcessorService.stopTyping()  // Stop typing before exiting
+                commandProcessorService.stopTyping() // Stop typing before exiting
                 systemExitHandler.exitProcess(0)
             }
 
@@ -160,15 +168,17 @@ class SwingMainWindow(
 
             frame.jMenuBar = menuBar
 
-            frame.addWindowListener(object : WindowAdapter() {
-                override fun windowClosing(e: WindowEvent?) {
-                    log.info("Closing application...")
-                    // Clean up resources, stop background threads ...
-                    commandProcessorService.stopTyping()  // Stop typing before exiting
-                    coroutineScope.cancel()
-                    systemExitHandler.exitProcess(0)
-                }
-            })
+            frame.addWindowListener(
+                object : WindowAdapter() {
+                    override fun windowClosing(e: WindowEvent?) {
+                        log.info("Closing application...")
+                        // Clean up resources, stop background threads ...
+                        commandProcessorService.stopTyping() // Stop typing before exiting
+                        coroutineScope.cancel()
+                        systemExitHandler.exitProcess(0)
+                    }
+                },
+            )
 
             // Card layout for switching between main panel and help panel
             cardLayout = CardLayout()
@@ -196,9 +206,8 @@ class SwingMainWindow(
 
     // Method to create the main panel
     private fun createMainPanel(frame: JFrame): JPanel {
-
         // Create a label for the current status (e.g., Paused/Resumed)
-        val statusLabel = JLabel("Status: Started")  // Initial status set to "Started"
+        val statusLabel = JLabel("Status: Started") // Initial status set to "Started"
 
         // Create Text Area with Scrollbars
         val textArea = JTextArea()
@@ -260,7 +269,7 @@ class SwingMainWindow(
         bottomPanel.layout = BoxLayout(bottomPanel, BoxLayout.Y_AXIS)
 
         // Status Panel with FlowLayout.RIGHT and horizontal gap for padding
-        val statusPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 25, 5))  // 25px horizontal padding
+        val statusPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 25, 5)) // 25px horizontal padding
         statusPanel.add(statusLabel)
 
         // Add both button panels to the bottom panel
@@ -317,7 +326,7 @@ class SwingMainWindow(
         clearButton.addActionListener {
             textArea.text = ""
             dropdown.selectedIndex = -1
-            radioButton.isSelected = true  // select radio button on clear fakeKeyboardService back on
+            radioButton.isSelected = true // select radio button on clear fakeKeyboardService back on
         }
 
         // Stop typing
@@ -417,7 +426,7 @@ class SwingMainWindow(
         val cmdTextLines = "key:$selectedKey"
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                commandProcessorService.getCommandProcessor().enqueueCommand(cmdTextLines)  // Use CommandProcessor
+                commandProcessorService.getCommandProcessor().enqueueCommand(cmdTextLines) // Use CommandProcessor
             } catch (e: Exception) {
                 log.info("Error sending key command: ${e.message}")
             }
@@ -447,7 +456,7 @@ class SwingMainWindow(
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 lines.forEach { command ->
-                    commandProcessorService.getCommandProcessor().enqueueCommand(command)  // Queue each command
+                    commandProcessorService.getCommandProcessor().enqueueCommand(command) // Queue each command
                 }
             } catch (e: Exception) {
                 log.info("Error sending commands: ${e.message}")
@@ -456,23 +465,24 @@ class SwingMainWindow(
     }
 
     // Disables a button temporarily to prevent multiple clicks during execution
-    private fun disableButtonTemporarily(button: JButton, action: () -> Unit) {
+    private fun disableButtonTemporarily(
+        button: JButton,
+        action: () -> Unit,
+    ) {
         button.isEnabled = false
         thread {
             if (shouldDelay()) {
-                Thread.sleep(1500)  // Sleep on a background thread, not the UI thread
+                Thread.sleep(1500) // Sleep on a background thread, not the UI thread
             }
             SwingUtilities.invokeLater {
                 action()
-                Timer(500) { button.isEnabled = true }.start()  // Re-enable after 500ms
+                Timer(500) { button.isEnabled = true }.start() // Re-enable after 500ms
             }
         }
     }
 
     // Determine whether to delay before sending commands
-    private fun shouldDelay(): Boolean {
-        return appConfig.mode.uppercase() in listOf("LOCAL", "VIRTUAL") || appConfig.keyboard.uiExtraDelay
-    }
+    private fun shouldDelay(): Boolean = appConfig.mode.uppercase() in listOf("LOCAL", "VIRTUAL") || appConfig.keyboard.uiExtraDelay
 
     // Actions for Radio Button State Changes
     private fun sendStopAction() {

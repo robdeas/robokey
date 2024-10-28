@@ -34,7 +34,10 @@ package tech.robd.robokey.tasks
  * @param description A brief description of what the task does.
  * @param id A unique identifier for the task.
  */
-enum class TaskName(val description: String, val id: Int) {
+enum class TaskName(
+    val description: String,
+    val id: Int,
+) {
     /**
      * Task that monitors changes to files.
      */
@@ -68,16 +71,15 @@ enum class TaskName(val description: String, val id: Int) {
 
     TASK_9("Task 9", 13),
 
-    TASK_10("Task 10", 14);
+    TASK_10("Task 10", 14),
+    ;
 
     /**
      * Custom string representation of the task, displaying the task name, ID, and description.
      *
      * @return A string representation of the task in the format: "TaskName (ID: id, Description: description)".
      */
-    override fun toString(): String {
-        return "$name (ID: $id, Description: $description)"
-    }
+    override fun toString(): String = "$name (ID: $id, Description: $description)"
 
     companion object {
         /**
@@ -89,9 +91,7 @@ enum class TaskName(val description: String, val id: Int) {
          * @param id The unique ID of the task to find.
          * @return The matching `TaskName`, or `null` if no match is found.
          */
-        fun fromId(id: Int): TaskName? {
-            return TaskName.entries.firstOrNull { it.id == id }
-        }
+        fun fromId(id: Int): TaskName? = TaskName.entries.firstOrNull { it.id == id }
 
         /**
          * Finds a `TaskName` by its description.
@@ -102,8 +102,7 @@ enum class TaskName(val description: String, val id: Int) {
          * @param description The description of the task to search for.
          * @return The matching `TaskName`, or `null` if no match is found.
          */
-        fun fromDescription(description: String): TaskName? {
-            return TaskName.entries.firstOrNull { it.description.equals(description, ignoreCase = true) }
-        }
+        fun fromDescription(description: String): TaskName? =
+            TaskName.entries.firstOrNull { it.description.equals(description, ignoreCase = true) }
     }
 }

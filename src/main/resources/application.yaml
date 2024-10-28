@@ -26,7 +26,7 @@ app: # You can edit these settings, but be careful, a rogue keyboard can cause c
       time: 100
     delay: # ignored for local (AWT Robot) keyboards
       jitter: false
-      jitterMax: 300
+      jitterMax: 500
       time: 300
   fileWatcher:
     enabled: true

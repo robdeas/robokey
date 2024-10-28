@@ -15,21 +15,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.  
  */
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package tech.robd.robokey.commands
 
-import tech.robd.robokey.AppConfig
+import kotlinx.coroutines.*
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.text.TextContentRenderer
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Component
 import org.springframework.util.FileCopyUtils
-import kotlinx.coroutines.*
+import tech.robd.robokey.AppConfig
 import tech.robd.robokey.Logable
 import tech.robd.robokey.SystemExitHandler
 import tech.robd.robokey.setupLogs
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
-import java.util.*
+import java.util.Scanner
 
 /**
  * ConsoleCommandHandler is responsible for handling console input commands and processing them using
@@ -47,8 +49,8 @@ class ConsoleCommandHandler(
     private val job = Job()
     private val scope = CoroutineScope(Dispatchers.Default + job)
 
-    companion object: Logable {
-            private val log = setupLogs
+    companion object : Logable {
+        private val log = setupLogs
 
         /**
          * Provides help content by reading from a markdown file (help.md) located in the classpath.
@@ -57,11 +59,12 @@ class ConsoleCommandHandler(
          */
         fun help(): String {
             val resource = ClassPathResource("help.md")
-            val markdownContent = resource.inputStream.use { inputStream ->
-                InputStreamReader(inputStream, StandardCharsets.UTF_8).use { reader ->
-                    FileCopyUtils.copyToString(reader)
+            val markdownContent =
+                resource.inputStream.use { inputStream ->
+                    InputStreamReader(inputStream, StandardCharsets.UTF_8).use { reader ->
+                        FileCopyUtils.copyToString(reader)
+                    }
                 }
-            }
             val parser = Parser.builder().build()
             val document = parser.parse(markdownContent)
             val renderer = TextContentRenderer.builder().build()
@@ -94,23 +97,26 @@ class ConsoleCommandHandler(
             }
 
             // Graceful shutdown hook
-            Runtime.getRuntime().addShutdownHook(Thread {
-                log.info("Shutting down gracefully...")
-                job.cancel()  // Cancel the coroutine scope
-                runBlocking {
-                    // Introduce a timeout for the join operation
-                    val shutdownComplete = withTimeoutOrNull(2000L) {
-                        job.join()
-                    }
+            Runtime.getRuntime().addShutdownHook(
+                Thread {
+                    log.info("Shutting down gracefully...")
+                    job.cancel() // Cancel the coroutine scope
+                    runBlocking {
+                        // Introduce a timeout for the join operation
+                        val shutdownComplete =
+                            withTimeoutOrNull(2000L) {
+                                job.join()
+                            }
 
-                    if (shutdownComplete != null) {
-                        log.info("Shutdown completed within 2 seconds.")
-                    } else {
-                        log.info("Shutdown timed out after 2 seconds. Proceeding with forced exit.")
+                        if (shutdownComplete != null) {
+                            log.info("Shutdown completed within 2 seconds.")
+                        } else {
+                            log.info("Shutdown timed out after 2 seconds. Proceeding with forced exit.")
+                        }
                     }
-                }
-                log.info("Shutdown complete.")
-            })
+                    log.info("Shutdown complete.")
+                },
+            )
         }
     }
 
@@ -124,11 +130,11 @@ class ConsoleCommandHandler(
         try {
             log.info("Handling command: $command")
             when (command.uppercase().trim()) {
-                "EXIT" -> systemExitHandler.exitProcess(0)  // System exit
-                "HELP" -> log.info(help())  // Show help content
-                "STOP" -> commandProcessorService.stopTyping()  // Stop typing
-                "RESET" -> commandProcessorService.resetKeyboardProcessor()  // Reset Arduino
-                "RESUME" -> commandProcessorService.resumeTyping()  // Resume typing
+                "EXIT" -> systemExitHandler.exitProcess(0) // System exit
+                "HELP" -> log.info(help()) // Show help content
+                "STOP" -> commandProcessorService.stopTyping() // Stop typing
+                "RESET" -> commandProcessorService.resetKeyboardProcessor() // Reset Arduino
+                "RESUME" -> commandProcessorService.resumeTyping() // Resume typing
                 else -> {
                     // Forward regular commands to the CommandProcessorService
                     commandProcessorService.getCommandProcessor().enqueueCommand(command)

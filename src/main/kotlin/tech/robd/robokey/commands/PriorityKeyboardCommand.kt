@@ -27,7 +27,9 @@ package tech.robd.robokey.commands
  *
  * @param textValue The text value of the command (e.g., "STOP", "PAUSE").
  */
-enum class PriorityKeyboardCommand(val textValue: String) {
+enum class PriorityKeyboardCommand(
+    val textValue: String,
+) {
     /**
      * Command to stop the keyboard operation.
      */
@@ -46,7 +48,8 @@ enum class PriorityKeyboardCommand(val textValue: String) {
     /**
      * Command to reset the keyboard or system state.
      */
-    RESET("RESET");
+    RESET("RESET"),
+    ;
 
     /**
      * Returns the original `textValue` of the command.
@@ -71,9 +74,7 @@ enum class PriorityKeyboardCommand(val textValue: String) {
      *
      * @return The text value of the command (e.g., "STOP", "PAUSE").
      */
-    override fun toString(): String {
-        return textValue
-    }
+    override fun toString(): String = textValue
 
     companion object {
         /**
@@ -81,8 +82,6 @@ enum class PriorityKeyboardCommand(val textValue: String) {
          *
          * @return A list of all the text values (e.g., ["STOP", "PAUSE", "RESUME", "RESET"]).
          */
-        fun getAllTextValues(): List<String> {
-            return PriorityKeyboardCommand.entries.map { it.textValue }
-        }
+        fun getAllTextValues(): List<String> = PriorityKeyboardCommand.entries.map { it.textValue }
     }
 }

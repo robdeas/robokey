@@ -17,8 +17,12 @@
  */
 package tech.robd.robokey.keyboards
 
-import io.mockk.*
-import org.junit.jupiter.api.*
+import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.unmockkAll
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import reactor.test.StepVerifier
 import tech.robd.robokey.AppConfig
 import java.io.File
@@ -39,15 +43,13 @@ class FakeKeyboardServiceTest {
 
     @Test
     fun `test logRawDataToFile creates file and writes lines`() {
-
         val testLines = listOf("line1", "line2", "line3")
 
         ensureFileAndParentDirsDoNotExist()
 
-        StepVerifier.create(fakeKeyboardService.logRawDataToFile(TEST_FILE_PATH, testLines))
-            .verifyComplete()
+        StepVerifier.create(fakeKeyboardService.logRawDataToFile(TEST_FILE_PATH, testLines)).verifyComplete()
 
-        verifyFileContent( testLines)
+        verifyFileContent(testLines)
 
         cleanUpTestFiles()
     }

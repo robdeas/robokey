@@ -36,7 +36,10 @@ import java.util.concurrent.TimeoutException
  * @param command The command string to be sent to the Arduino.
  * @param timeout The maximum time (in milliseconds) to wait for a response before timing out.
  */
-data class ArduinoCommand(val command: String, val timeout: Long)
+data class ArduinoCommand(
+    val command: String,
+    val timeout: Long,
+)
 
 /**
  * Service responsible for communicating with the Arduino via a serial port.
@@ -48,14 +51,16 @@ data class ArduinoCommand(val command: String, val timeout: Long)
  * @param appConfig The application configuration that provides settings such as the COM port and keyboard behavior.
  */
 @Service
-class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
+class ArduinoService(
+    val appConfig: AppConfig,
+) : KeyboardInterface {
     companion object : Logable {
         private val log = setupLogs
     }
 
     private var commPort: SerialPort? = null
-    private var out: OutputStream? = null
-    private var `in`: InputStream? = null
+    private var writeableSerialPort: OutputStream? = null
+    private var readableSerialPort: InputStream? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var isPaused = false
     private var isStopped = false
@@ -64,9 +69,11 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
 
     init {
         // Ensure resources are cleaned up on application shutdown
-        Runtime.getRuntime().addShutdownHook(Thread {
-            closeSerialConnection()
-        })
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                closeSerialConnection()
+            },
+        )
     }
 
     /**
@@ -85,35 +92,35 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
             setupCommands.add(
                 ArduinoCommand(
                     if (appConfig.keyboard.press.jitter) "CMD_KEY_JITTER_ON" else "CMD_KEY_JITTER_OFF",
-                    2000
-                )
+                    2000,
+                ),
             )
             setupCommands.add(ArduinoCommand("CMD_SET_PRESS_LENGTH:${appConfig.keyboard.press.time}", 1000))
             setupCommands.add(ArduinoCommand("CMD_SET_KEY_JITTER_VALUE:${appConfig.keyboard.press.jitterMax}", 1000))
             setupCommands.add(
                 ArduinoCommand(
                     if (appConfig.keyboard.interval.jitter) "CMD_DELAY_JITTER_ON" else "CMD_DELAY_JITTER_OFF",
-                    2000
-                )
+                    2000,
+                ),
             )
             setupCommands.add(ArduinoCommand("CMD_SET_DELAY:${appConfig.keyboard.interval.time}", 2000))
             setupCommands.add(
                 ArduinoCommand(
                     "CMD_SET_DELAY_JITTER_VALUE:${appConfig.keyboard.interval.jitterMax}",
-                    2000
-                )
+                    2000,
+                ),
             )
             setupCommands.add(
                 ArduinoCommand(
                     if (appConfig.keyboard.allJitter) "CMD_JITTER_ON" else "CMD_JITTER_OFF",
-                    2000
-                )
+                    2000,
+                ),
             )
             setupCommands.add(
                 ArduinoCommand(
                     if (appConfig.keyboard.output) "CMD_OUTPUT_ON" else "CMD_OUTPUT_OFF",
-                    1000
-                )
+                    1000,
+                ),
             )
 
             queueCommands(setupCommands)
@@ -140,21 +147,21 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
                         log.info("Using existing serial connection.")
                         sink.success()
                     } else {
-                        sink.error(IllegalStateException("Port is currently in use"))
+                        sink.error(IllegalStateException("Port is currently `in` use"))
                         return@create
                     }
                 }
 
                 commPort = portId.open("SerialPortApp", 2000) as SerialPort
                 commPort?.setSerialPortParams(
-                    9600,  // Baud rate
+                    9600, // Baud rate
                     SerialPort.DATABITS_8,
                     SerialPort.STOPBITS_1,
-                    SerialPort.PARITY_NONE
+                    SerialPort.PARITY_NONE,
                 )
 
-                out = commPort?.outputStream
-                `in` = commPort?.inputStream
+                writeableSerialPort = commPort?.outputStream
+                readableSerialPort = commPort?.inputStream
 
                 // Start reading from the serial port asynchronously
                 scope.launch {
@@ -174,49 +181,56 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
      *
      * This method first opens the serial connection if it is not already open, then sends the commands sequentially.
      * If the system is stopped, it only sends priority commands. It also handles waiting for the Arduino to be ready
-     * if the busy state is enabled in the configuration.
+     * if the busy state is enabled `in` the configuration.
      *
      * @param portName The name of the serial port.
      * @param commands A list of `ArduinoCommand` objects to send.
      * @return A `Mono` signaling the success or failure of the command transmission.
      */
-    fun sendRawDataToArduino(portName: String, commands: List<ArduinoCommand>): Mono<Void> {
-        return getOrOpenSerialConnection(portName).then(Mono.create { sink ->
-            scope.launch {
-                try {
-                    for (cmd in commands) {
-                        if (isStopped) {
-                            if (isPriorityArduinoCommand(cmd.command)) {
-                                out?.flush()
-                                out?.write((cmd.command + "\n").toByteArray())
-                                out?.flush()
-                            }
-                        } else {
-                            // Wait for Arduino to be free if useBusyState is enabled
-                            if (appConfig.keyboard.useBusyState) {
-                                withTimeoutOrNull(cmd.timeout) {
-                                    while (isBusy) {
-                                        log.info("Waiting for Arduino to be ready for command: ${cmd.command}")
-                                        delay(100)  // Check every 100ms
-                                    }
-                                } ?: run {
-                                    log.info("Timeout waiting for Arduino to be free for command: ${cmd.command}")
-                                    sink.error(TimeoutException("Timeout waiting for Arduino to become free for command: ${cmd.command}"))
-                                    return@launch
+    fun sendRawDataToArduino(
+        portName: String,
+        commands: List<ArduinoCommand>,
+    ): Mono<Void> {
+        return getOrOpenSerialConnection(portName).then(
+            Mono.create { sink ->
+                scope.launch {
+                    try {
+                        for (cmd in commands) {
+                            if (isStopped) {
+                                if (isPriorityArduinoCommand(cmd.command)) {
+                                    writeableSerialPort?.flush()
+                                    writeableSerialPort?.write((cmd.command + "\n").toByteArray())
+                                    writeableSerialPort?.flush()
                                 }
-                            }
+                            } else {
+                                // Wait for Arduino to be free if useBusyState is enabled
+                                if (appConfig.keyboard.useBusyState) {
+                                    withTimeoutOrNull(cmd.timeout) {
+                                        while (isBusy) {
+                                            log.info("Waiting for Arduino to be ready for command: ${cmd.command}")
+                                            delay(100) // Check every 100ms
+                                        }
+                                    } ?: run {
+                                        log.info("Timeout waiting for Arduino to be free for command: ${cmd.command}")
+                                        sink.error(
+                                            TimeoutException("Timeout waiting for Arduino to become free for command: ${cmd.command}"),
+                                        )
+                                        return@launch
+                                    }
+                                }
 
-                            out?.write((cmd.command + "\n").toByteArray())
-                            out?.flush()
-                            delay(1000)  // Non-blocking delay between sending lines
+                                writeableSerialPort?.write((cmd.command + "\n").toByteArray())
+                                writeableSerialPort?.flush()
+                                delay(1000) // Non-blocking delay between sending lines
+                            }
                         }
+                        sink.success()
+                    } catch (e: Exception) {
+                        sink.error(e)
                     }
-                    sink.success()
-                } catch (e: Exception) {
-                    sink.error(e)
                 }
-            }
-        })
+            },
+        )
     }
 
     /**
@@ -230,7 +244,8 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
     private fun isPriorityArduinoCommand(line: String): Boolean {
         val trimmedLine = line.trim().uppercase()
         return trimmedLine in PriorityKeyboardCommand.getAllTextValues() ||
-                trimmedLine.startsWith("CMD:") && trimmedLine.substring(4) in PriorityKeyboardCommand.getAllTextValues()
+            trimmedLine.startsWith("CMD:") &&
+            trimmedLine.substring(4) in PriorityKeyboardCommand.getAllTextValues()
     }
 
     /**
@@ -240,13 +255,13 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
      *
      */
     private suspend fun readFromSerialPort() {
-        delay(2000)  // Wait for the serial connection to be ready
+        delay(2000) // Wait for the serial connection to be ready
         val buffer = ByteArray(1024)
         val stringBuilder = StringBuilder()
         try {
             withContext(Dispatchers.IO) {
                 while (true) {
-                    val bytesRead = `in`?.read(buffer) ?: -1
+                    val bytesRead = readableSerialPort?.read(buffer) ?: -1
                     if (bytesRead > 0) {
                         val response = String(buffer, 0, bytesRead)
                         stringBuilder.append(response)
@@ -254,7 +269,7 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
                         var lineEndIndex: Int
                         while (stringBuilder.indexOf("\n").also { lineEndIndex = it } != -1) {
                             val line = stringBuilder.substring(0, lineEndIndex).trim()
-                            stringBuilder.delete(0, lineEndIndex + 1)  // Remove the processed line
+                            stringBuilder.delete(0, lineEndIndex + 1) // Remove the processed line
 
                             synchronized(System.out) {
                                 log.info("Received from Arduino: $line")
@@ -269,7 +284,7 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
                             }
                         }
                     } else if (bytesRead == -1) {
-                        break  // End of stream reached
+                        break // End of stream reached
                     }
                 }
             }
@@ -280,7 +295,7 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
         } finally {
             try {
                 withContext(Dispatchers.IO) {
-                    `in`?.close()
+                    readableSerialPort?.close()
                 }
             } catch (e: IOException) {
                 log.info("Error closing input stream: ${e.message}")
@@ -293,10 +308,10 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
      */
     private fun closeSerialConnection() {
         try {
-            out?.close()
-            `in`?.close()
+            writeableSerialPort?.close()
+            readableSerialPort?.close()
             commPort?.close()
-            scope.cancel()  // Cancel the coroutine scope
+            scope.cancel() // Cancel the coroutine scope
         } catch (e: Exception) {
             log.info("Error closing serial connection: ${e.message}")
         }
@@ -310,10 +325,9 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
      * @param commands A list of command strings to send to the Arduino.
      */
     override suspend fun sendCommandData(commands: List<String>) {
-        val arduinoCommands = commands.map { ArduinoCommand(it, 3000) }  // Example timeout
+        val arduinoCommands = commands.map { ArduinoCommand(it, 3000) } // Example timeout
         queueCommands(arduinoCommands)
     }
-
 
     /**
      * Stops the system and clears the command queue, resetting any ongoing operations.
@@ -357,5 +371,4 @@ class ArduinoService(val appConfig: AppConfig) : KeyboardInterface {
             }
         }
     }
-
 }
