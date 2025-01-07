@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import org.springframework.stereotype.Service
 import tech.robd.robokey.AppConfig
 import tech.robd.robokey.Logable
+import tech.robd.robokey.events.CommandEventContext
 import tech.robd.robokey.keyboards.ArduinoService
 import tech.robd.robokey.keyboards.KeyboardInterface
 import tech.robd.robokey.keyboards.LocalRobotKeyboardService
@@ -41,7 +42,7 @@ import tech.robd.robokey.setupLogs
 class CommandProcessorService(
     private val arduinoService: ArduinoService?,
     private val localRobotKeyboardService: LocalRobotKeyboardService?,
-    private val appConfig: AppConfig
+    private val appConfig: AppConfig,
 ) {
     companion object : Logable {
         private val log = setupLogs
@@ -51,20 +52,22 @@ class CommandProcessorService(
     private val keyboardService by lazy { getCommandProcessor() }
 
     // Command processor for local keyboard
-    private val localCommandProcessor = localRobotKeyboardService?.let {
-        CommandProcessor(
-            keyboardService = it,
-            appConfig = appConfig
-        )
-    }
+    private val localCommandProcessor =
+        localRobotKeyboardService?.let {
+            CommandProcessor(
+                keyboardService = it,
+                appConfig = appConfig,
+            )
+        }
 
     // Command processor for Arduino
-    private val arduinoCommandProcessor = arduinoService?.let {
-        CommandProcessor(
-            keyboardService = it,
-            appConfig = appConfig
-        )
-    }
+    private val arduinoCommandProcessor =
+        arduinoService?.let {
+            CommandProcessor(
+                keyboardService = it,
+                appConfig = appConfig,
+            )
+        }
 
     // Coroutine scope for command processing, tied to the service's lifecycle
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -72,10 +75,10 @@ class CommandProcessorService(
     /**
      * Enqueue a stop command to the local keyboard processor to stop typing and clear any command buffers.
      */
-    fun stopTyping() {
+    fun stopTyping(parentEvent: CommandEventContext) {
         scope.launch {
             try {
-                keyboardService.enqueueCommand("STOP")
+                keyboardService.enqueueCommand("STOP", parentEvent)
             } catch (e: Exception) {
                 log.info("Error while enqueuing STOP command: ${e.message}")
             }
@@ -85,10 +88,10 @@ class CommandProcessorService(
     /**
      * Enqueue a pause command to the local keyboard processor to stop typing but not clear any command buffers.
      */
-    fun pauseTyping() {
+    fun pauseTyping(parentEvent: CommandEventContext) {
         scope.launch {
             try {
-                keyboardService.enqueueCommand("PAUSE")
+                keyboardService.enqueueCommand("PAUSE", parentEvent)
             } catch (e: Exception) {
                 log.info("Error while enqueuing PAUSE command: ${e.message}")
             }
@@ -98,11 +101,11 @@ class CommandProcessorService(
     /**
      * Enqueue a reset command to the Arduino or LocalRobot processor to reset the Arduino keyboard or reinitialize the awt robot.
      */
-    fun resetKeyboardProcessor() {
+    fun resetKeyboardProcessor(parentEvent: CommandEventContext) {
         scope.launch {
             try {
                 if (keyboardService.isUsingArduino() || keyboardService.isUsingLocalRobot()) {
-                    keyboardService.enqueueCommand("RESET")
+                    keyboardService.enqueueCommand("RESET", parentEvent)
                 }
             } catch (e: Exception) {
                 log.info("Error while enqueuing RESET command: ${e.message}")
@@ -113,10 +116,10 @@ class CommandProcessorService(
     /**
      * Enqueue a resume command to the local keyboard processor to resume typing.
      */
-    fun resumeTyping() {
+    fun resumeTyping(parentEvent: CommandEventContext) {
         scope.launch {
             try {
-                keyboardService.enqueueCommand("RESUME")
+                keyboardService.enqueueCommand("RESUME", parentEvent)
             } catch (e: Exception) {
                 log.info("Error while enqueuing RESUME command: ${e.message}")
             }
@@ -129,40 +132,45 @@ class CommandProcessorService(
      * The modes are determined by the appConfig.mode:
      * - "HARDWARE" or "PHYSICAL": Returns the Arduino processor.
      * - "VIRTUAL" or "LOCAL": Returns the local keyboard processor.
-     * - "DUMMY" or "LOG": Returns a dummy processor for logging or testing.
+     * - "DUMMY" or "LOG": Returns a fake processor for logging or testing.
      *
      * @return The selected CommandProcessor based on the current mode.
      */
-    fun getCommandProcessor(): CommandProcessor {
-        return when (appConfig.mode.uppercase()) {
-            "HARDWARE", "PHYSICAL" -> arduinoCommandProcessor
-                ?: throw IllegalStateException("ArduinoService is not available.")
+    fun getCommandProcessor(): CommandProcessor =
+        when (appConfig.mode.uppercase()) {
+            "HARDWARE", "PHYSICAL" ->
+                arduinoCommandProcessor
+                    ?: throw IllegalStateException("ArduinoService is not available.")
 
-            "VIRTUAL", "LOCAL" -> localCommandProcessor
-                ?: throw IllegalStateException("LocalRobotKeyboardService is not available.")
+            "VIRTUAL", "LOCAL" ->
+                localCommandProcessor
+                    ?: throw IllegalStateException("LocalRobotKeyboardService is not available.")
 
             "DUMMY", "LOG" -> {
-                // Return a dummy processor for logging or testing purposes
-                val dummyKeyboardService = object : KeyboardInterface {
-                    override suspend fun sendCommandData(commands: List<String>) {
-                        log.info("DummyKeyboardService received commands: $commands")
-                    }
+                // Return a fake processor for logging or testing purposes
+                val dummyKeyboardService =
+                    object : KeyboardInterface {
+                        override suspend fun sendCommandData(
+                            commands: List<String>,
+                            commandEventContext: CommandEventContext,
+                        ) {
+                            log.info("DummyKeyboardService received commands: $commands")
+                        }
 
-                    override suspend fun stopAndClearQueue() {
-                        log.info("DummyKeyboardService stopAndClearQueue called")
-                    }
+                        override suspend fun stopAndClearQueue() {
+                            log.info("DummyKeyboardService stopAndClearQueue called")
+                        }
 
-                    override suspend fun resume() {
-                        log.info("DummyKeyboardService resume called")
+                        override suspend fun resume() {
+                            log.info("DummyKeyboardService resume called")
+                        }
                     }
-                }
                 CommandProcessor(
                     keyboardService = dummyKeyboardService,
-                    appConfig = appConfig
+                    appConfig = appConfig,
                 )
             }
 
             else -> throw IllegalStateException("Unknown config mode: ${appConfig.mode}")
         }
-    }
 }

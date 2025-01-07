@@ -17,19 +17,23 @@
  */
 package tech.robd.robokey.keyboards
 
+import tech.robd.robokey.events.CommandEventContext
+
 /**
  * KeyboardInterface defines the essential functions required for any keyboard service implementation.
  * This interface is implemented by services that send commands to either a local or remote keyboard.
  */
 interface KeyboardInterface {
-
     /**
      * Sends a list of commands to the keyboard.
      * This function is typically asynchronous and will execute the commands as they are provided.
      *
      * @param commands The list of command strings to be sent to the keyboard.
      */
-    suspend fun sendCommandData(commands: List<String>)
+    suspend fun sendCommandData(
+        commands: List<String>,
+        commandEventContext: CommandEventContext,
+    )
 
     /**
      * Stops the keyboard service and clears any pending commands in the queue.

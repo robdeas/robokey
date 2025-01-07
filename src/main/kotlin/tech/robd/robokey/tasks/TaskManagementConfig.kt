@@ -35,7 +35,6 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration
 class TaskManagementConfig {
-
     /**
      * Provides a `CoroutineScope` for managing the lifecycle of coroutines in the application.
      *
@@ -57,9 +56,7 @@ class TaskManagementConfig {
      * @return A `CoroutineScope` using `SupervisorJob` and `Dispatchers.IO` for optimal task execution.
      */
     @Bean
-    fun taskScope(): CoroutineScope {
-        return CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    }
+    fun taskScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Provides a `TaskPoolManager` bean that uses the provided `CoroutineScope` to manage tasks.
@@ -72,7 +69,5 @@ class TaskManagementConfig {
      * @return A `TaskPoolManager` that manages tasks within the given coroutine scope.
      */
     @Bean
-    fun taskPoolManager(scope: CoroutineScope): TaskPoolManager {
-        return TaskPoolManager(scope)
-    }
+    fun taskPoolManager(scope: CoroutineScope): TaskPoolManager = TaskPoolManager(scope)
 }

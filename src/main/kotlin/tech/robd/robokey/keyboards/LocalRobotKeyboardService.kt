@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.  
  */
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package tech.robd.robokey.keyboards
 
 import kotlinx.coroutines.*
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service
 import tech.robd.robokey.AppConfig
 import tech.robd.robokey.Logable
 import tech.robd.robokey.commands.KeyboardCommand
+import tech.robd.robokey.events.CommandEventContext
 import tech.robd.robokey.setupLogs
 import java.awt.Robot
 import java.awt.event.KeyEvent
@@ -39,13 +42,14 @@ import java.util.Locale
  * @param appConfig The application configuration that provides settings related to keyboard output and delays.
  */
 @Service
-class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
-
+class LocalRobotKeyboardService(
+    val appConfig: AppConfig,
+) : KeyboardInterface {
     // Lazy initialisation of the `Robot`
     private var robot: Robot? = null
         get() {
             if (field == null) {
-                field = Robot()  // Create new Robot if it hasn't been initialised
+                field = Robot() // Create new Robot if it hasn't been initialised
             }
             return field
         }
@@ -54,7 +58,6 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
     private var isStopped = false
 
     companion object : Logable {
-
         private val log = setupLogs
 
         /**
@@ -67,171 +70,175 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
         data class KeyMapping(
             val key: Int,
             val needsShift: Boolean = false,
-            val needsAltGr: Boolean = false
+            val needsAltGr: Boolean = false,
         )
 
         /**
          * A map of common key commands to their respective `KeyEvent` keycodes.
          * These mappings allow for the use of symbolic names in command processing.
          */
-        val keyMap = mapOf(
-            "@C" to KeyEvent.VK_CONTROL,
-            "@S" to KeyEvent.VK_SHIFT,
-            "@A" to KeyEvent.VK_ALT,
-            "\\R" to KeyEvent.VK_ENTER,
-            "\\B" to KeyEvent.VK_BACK_SPACE,
-            // Additional key mappings here...
-            "RETURN" to KeyEvent.VK_ENTER,
-            "UP" to KeyEvent.VK_UP,
-            "DOWN" to KeyEvent.VK_DOWN,
-            "LEFT" to KeyEvent.VK_LEFT,
-            "RIGHT" to KeyEvent.VK_RIGHT,
-            "CTRL" to KeyEvent.VK_CONTROL,
-            "SHIFT" to KeyEvent.VK_SHIFT,
-            "ALT" to KeyEvent.VK_ALT,
-            "GUI" to KeyEvent.VK_WINDOWS,
-            "ALT_GR" to KeyEvent.VK_ALT_GRAPH,
-            "DEL" to KeyEvent.VK_DELETE,
-            "ENTER" to KeyEvent.VK_ENTER,
-            "BS" to KeyEvent.VK_BACK_SPACE,
-            "BKSP" to KeyEvent.VK_BACK_SPACE,
-            "LEFT_CTRL" to KeyEvent.VK_CONTROL,
-            "LEFT_SHIFT" to KeyEvent.VK_SHIFT,
-            "LEFT_ALT" to KeyEvent.VK_ALT,
-            "LEFT_GUI" to KeyEvent.VK_WINDOWS,
-            "RIGHT_CTRL" to KeyEvent.VK_CONTROL,
-            "RIGHT_SHIFT" to KeyEvent.VK_SHIFT,
-            "RIGHT_ALT" to KeyEvent.VK_ALT_GRAPH,
-            "RIGHT_GUI" to KeyEvent.VK_WINDOWS,
-            "UP_ARROW" to KeyEvent.VK_UP,
-            "DOWN_ARROW" to KeyEvent.VK_DOWN,
-            "LEFT_ARROW" to KeyEvent.VK_LEFT,
-            "RIGHT_ARROW" to KeyEvent.VK_RIGHT,
-            "BACKSPACE" to KeyEvent.VK_BACK_SPACE,
-            "TAB" to KeyEvent.VK_TAB,
-            "RETURN" to KeyEvent.VK_ENTER,
-            "MENU" to KeyEvent.VK_CONTEXT_MENU,
-            "ESC" to KeyEvent.VK_ESCAPE,
-            "INSERT" to KeyEvent.VK_INSERT,
-            "DELETE" to KeyEvent.VK_DELETE,
-            "PAGE_UP" to KeyEvent.VK_PAGE_UP,
-            "PAGE_DOWN" to KeyEvent.VK_PAGE_DOWN,
-            "HOME" to KeyEvent.VK_HOME,
-            "END" to KeyEvent.VK_END,
-            "CAPS_LOCK" to KeyEvent.VK_CAPS_LOCK,
-            "PRINT_SCREEN" to KeyEvent.VK_PRINTSCREEN,
-            "SCROLL_LOCK" to KeyEvent.VK_SCROLL_LOCK,
-            "PAUSE" to KeyEvent.VK_PAUSE,
-            "NUM_LOCK" to KeyEvent.VK_NUM_LOCK,
-            "KP_SLASH" to KeyEvent.VK_DIVIDE,
-            "KP_ASTERISK" to KeyEvent.VK_MULTIPLY,
-            "KP_MINUS" to KeyEvent.VK_SUBTRACT,
-            "KP_PLUS" to KeyEvent.VK_ADD,
-            "KP_ENTER" to KeyEvent.VK_ENTER,
-            "KP_1" to KeyEvent.VK_NUMPAD1,
-            "KP_2" to KeyEvent.VK_NUMPAD2,
-            "KP_3" to KeyEvent.VK_NUMPAD3,
-            "KP_4" to KeyEvent.VK_NUMPAD4,
-            "KP_5" to KeyEvent.VK_NUMPAD5,
-            "KP_6" to KeyEvent.VK_NUMPAD6,
-            "KP_7" to KeyEvent.VK_NUMPAD7,
-            "KP_8" to KeyEvent.VK_NUMPAD8,
-            "KP_9" to KeyEvent.VK_NUMPAD9,
-            "KP_0" to KeyEvent.VK_NUMPAD0,
-            "KP_DOT" to KeyEvent.VK_DECIMAL,
-            "F1" to KeyEvent.VK_F1,
-            "F2" to KeyEvent.VK_F2,
-            "F3" to KeyEvent.VK_F3,
-            "F4" to KeyEvent.VK_F4,
-            "F5" to KeyEvent.VK_F5,
-            "F6" to KeyEvent.VK_F6,
-            "F7" to KeyEvent.VK_F7,
-            "F8" to KeyEvent.VK_F8,
-            "F9" to KeyEvent.VK_F9,
-            "F10" to KeyEvent.VK_F10,
-            "F11" to KeyEvent.VK_F11,
-            "F12" to KeyEvent.VK_F12,
-            "F13" to KeyEvent.VK_F13,
-            "F14" to KeyEvent.VK_F14,
-            "F15" to KeyEvent.VK_F15,
-            "F16" to KeyEvent.VK_F16,
-            "F17" to KeyEvent.VK_F17,
-            "F18" to KeyEvent.VK_F18,
-            "F19" to KeyEvent.VK_F19,
-            "F20" to KeyEvent.VK_F20,
-            "F21" to KeyEvent.VK_F21,
-            "F22" to KeyEvent.VK_F22,
-            "F23" to KeyEvent.VK_F23,
-            "F24" to KeyEvent.VK_F24,
-        )
+        val keyMap =
+            mapOf(
+                "@C" to KeyEvent.VK_CONTROL,
+                "@S" to KeyEvent.VK_SHIFT,
+                "@A" to KeyEvent.VK_ALT,
+                "\\R" to KeyEvent.VK_ENTER,
+                "\\B" to KeyEvent.VK_BACK_SPACE,
+                // Additional key mappings here...
+                "RETURN" to KeyEvent.VK_ENTER,
+                "UP" to KeyEvent.VK_UP,
+                "DOWN" to KeyEvent.VK_DOWN,
+                "LEFT" to KeyEvent.VK_LEFT,
+                "RIGHT" to KeyEvent.VK_RIGHT,
+                "CTRL" to KeyEvent.VK_CONTROL,
+                "SHIFT" to KeyEvent.VK_SHIFT,
+                "ALT" to KeyEvent.VK_ALT,
+                "GUI" to KeyEvent.VK_WINDOWS,
+                "ALT_GR" to KeyEvent.VK_ALT_GRAPH,
+                "DEL" to KeyEvent.VK_DELETE,
+                "ENTER" to KeyEvent.VK_ENTER,
+                "BS" to KeyEvent.VK_BACK_SPACE,
+                "BKSP" to KeyEvent.VK_BACK_SPACE,
+                "LEFT_CTRL" to KeyEvent.VK_CONTROL,
+                "LEFT_SHIFT" to KeyEvent.VK_SHIFT,
+                "LEFT_ALT" to KeyEvent.VK_ALT,
+                "LEFT_GUI" to KeyEvent.VK_WINDOWS,
+                "RIGHT_CTRL" to KeyEvent.VK_CONTROL,
+                "RIGHT_SHIFT" to KeyEvent.VK_SHIFT,
+                "RIGHT_ALT" to KeyEvent.VK_ALT_GRAPH,
+                "RIGHT_GUI" to KeyEvent.VK_WINDOWS,
+                "UP_ARROW" to KeyEvent.VK_UP,
+                "DOWN_ARROW" to KeyEvent.VK_DOWN,
+                "LEFT_ARROW" to KeyEvent.VK_LEFT,
+                "RIGHT_ARROW" to KeyEvent.VK_RIGHT,
+                "BACKSPACE" to KeyEvent.VK_BACK_SPACE,
+                "TAB" to KeyEvent.VK_TAB,
+                "RETURN" to KeyEvent.VK_ENTER,
+                "MENU" to KeyEvent.VK_CONTEXT_MENU,
+                "ESC" to KeyEvent.VK_ESCAPE,
+                "INSERT" to KeyEvent.VK_INSERT,
+                "DELETE" to KeyEvent.VK_DELETE,
+                "PAGE_UP" to KeyEvent.VK_PAGE_UP,
+                "PAGE_DOWN" to KeyEvent.VK_PAGE_DOWN,
+                "HOME" to KeyEvent.VK_HOME,
+                "END" to KeyEvent.VK_END,
+                "CAPS_LOCK" to KeyEvent.VK_CAPS_LOCK,
+                "PRINT_SCREEN" to KeyEvent.VK_PRINTSCREEN,
+                "SCROLL_LOCK" to KeyEvent.VK_SCROLL_LOCK,
+                "PAUSE" to KeyEvent.VK_PAUSE,
+                "NUM_LOCK" to KeyEvent.VK_NUM_LOCK,
+                "KP_SLASH" to KeyEvent.VK_DIVIDE,
+                "KP_ASTERISK" to KeyEvent.VK_MULTIPLY,
+                "KP_MINUS" to KeyEvent.VK_SUBTRACT,
+                "KP_PLUS" to KeyEvent.VK_ADD,
+                "KP_ENTER" to KeyEvent.VK_ENTER,
+                "KP_1" to KeyEvent.VK_NUMPAD1,
+                "KP_2" to KeyEvent.VK_NUMPAD2,
+                "KP_3" to KeyEvent.VK_NUMPAD3,
+                "KP_4" to KeyEvent.VK_NUMPAD4,
+                "KP_5" to KeyEvent.VK_NUMPAD5,
+                "KP_6" to KeyEvent.VK_NUMPAD6,
+                "KP_7" to KeyEvent.VK_NUMPAD7,
+                "KP_8" to KeyEvent.VK_NUMPAD8,
+                "KP_9" to KeyEvent.VK_NUMPAD9,
+                "KP_0" to KeyEvent.VK_NUMPAD0,
+                "KP_DOT" to KeyEvent.VK_DECIMAL,
+                "F1" to KeyEvent.VK_F1,
+                "F2" to KeyEvent.VK_F2,
+                "F3" to KeyEvent.VK_F3,
+                "F4" to KeyEvent.VK_F4,
+                "F5" to KeyEvent.VK_F5,
+                "F6" to KeyEvent.VK_F6,
+                "F7" to KeyEvent.VK_F7,
+                "F8" to KeyEvent.VK_F8,
+                "F9" to KeyEvent.VK_F9,
+                "F10" to KeyEvent.VK_F10,
+                "F11" to KeyEvent.VK_F11,
+                "F12" to KeyEvent.VK_F12,
+                "F13" to KeyEvent.VK_F13,
+                "F14" to KeyEvent.VK_F14,
+                "F15" to KeyEvent.VK_F15,
+                "F16" to KeyEvent.VK_F16,
+                "F17" to KeyEvent.VK_F17,
+                "F18" to KeyEvent.VK_F18,
+                "F19" to KeyEvent.VK_F19,
+                "F20" to KeyEvent.VK_F20,
+                "F21" to KeyEvent.VK_F21,
+                "F22" to KeyEvent.VK_F22,
+                "F23" to KeyEvent.VK_F23,
+                "F24" to KeyEvent.VK_F24,
+            )
 
         /**
          * A map of locale-specific key mappings for characters that require special handling (e.g., Shift or AltGr).
          * This map allows for localized character handling, particularly for special characters and symbols.
          */
-        private val localeKeyMap: Map<Locale, Map<Char, KeyMapping>> = mapOf(
-            Locale.US to mapOf(
-                ':' to KeyMapping(KeyEvent.VK_SEMICOLON, needsShift = true),
-                ';' to KeyMapping(KeyEvent.VK_SEMICOLON),
-                '!' to KeyMapping(KeyEvent.VK_1, needsShift = true),
-                '@' to KeyMapping(KeyEvent.VK_2, needsShift = true),
-                '#' to KeyMapping(KeyEvent.VK_3, needsShift = true),
-                '$' to KeyMapping(KeyEvent.VK_4, needsShift = true),
-                '%' to KeyMapping(KeyEvent.VK_5, needsShift = true),
-                '^' to KeyMapping(KeyEvent.VK_6, needsShift = true),
-                '&' to KeyMapping(KeyEvent.VK_7, needsShift = true),
-                '*' to KeyMapping(KeyEvent.VK_8, needsShift = true),
-                '(' to KeyMapping(KeyEvent.VK_9, needsShift = true),
-                ')' to KeyMapping(KeyEvent.VK_0, needsShift = true),
-                '_' to KeyMapping(KeyEvent.VK_MINUS, needsShift = true),
-                '+' to KeyMapping(KeyEvent.VK_EQUALS, needsShift = true),
-                '{' to KeyMapping(KeyEvent.VK_BRACELEFT, needsShift = true),
-                '}' to KeyMapping(KeyEvent.VK_BRACERIGHT, needsShift = true),
-                '|' to KeyMapping(KeyEvent.VK_BACK_SLASH, needsShift = true),
-                '<' to KeyMapping(KeyEvent.VK_COMMA, needsShift = true),
-                '>' to KeyMapping(KeyEvent.VK_PERIOD, needsShift = true),
-                '?' to KeyMapping(KeyEvent.VK_SLASH, needsShift = true),
-                '"' to KeyMapping(KeyEvent.VK_QUOTE, needsShift = true), // Adjusted for US keyboard
-                '~' to KeyMapping(KeyEvent.VK_BACK_QUOTE, needsShift = true),
-                '`' to KeyMapping(KeyEvent.VK_BACK_QUOTE),
-                '-' to KeyMapping(KeyEvent.VK_MINUS),
-                '=' to KeyMapping(KeyEvent.VK_EQUALS),
-                '[' to KeyMapping(KeyEvent.VK_OPEN_BRACKET),
-                ']' to KeyMapping(KeyEvent.VK_CLOSE_BRACKET)
-                // Additional characters and locales would be similar
-            ),
-            Locale.UK to mapOf(
-                // Adjust these mappings for the UK keyboard if they differ
-                ':' to KeyMapping(KeyEvent.VK_SEMICOLON, needsShift = true),
-                ';' to KeyMapping(KeyEvent.VK_SEMICOLON),
-                '!' to KeyMapping(KeyEvent.VK_1, needsShift = true),
-                '@' to KeyMapping(KeyEvent.VK_QUOTE, needsShift = true), // Adjusted for UK keyboard
-                '£' to KeyMapping(KeyEvent.VK_3, needsShift = true), // NOT on US keyboard
-                '#' to KeyMapping(KeyEvent.VK_NUMBER_SIGN), // No shift needed for UK
-                '$' to KeyMapping(KeyEvent.VK_4, needsShift = true),
-                '%' to KeyMapping(KeyEvent.VK_5, needsShift = true),
-                '^' to KeyMapping(KeyEvent.VK_6, needsShift = true),
-                '&' to KeyMapping(KeyEvent.VK_7, needsShift = true),
-                '*' to KeyMapping(KeyEvent.VK_8, needsShift = true),
-                '(' to KeyMapping(KeyEvent.VK_9, needsShift = true),
-                ')' to KeyMapping(KeyEvent.VK_0, needsShift = true),
-                '_' to KeyMapping(KeyEvent.VK_MINUS, needsShift = true),
-                '+' to KeyMapping(KeyEvent.VK_EQUALS, needsShift = true),
-                '{' to KeyMapping(KeyEvent.VK_BRACELEFT, needsShift = true),
-                '}' to KeyMapping(KeyEvent.VK_BRACERIGHT, needsShift = true),
-                '|' to KeyMapping(KeyEvent.VK_BACK_SLASH, needsShift = true),
-                '<' to KeyMapping(KeyEvent.VK_COMMA, needsShift = true),
-                '>' to KeyMapping(KeyEvent.VK_PERIOD, needsShift = true),
-                '?' to KeyMapping(KeyEvent.VK_SLASH, needsShift = true),
-                '"' to KeyMapping(KeyEvent.VK_2, needsShift = true), // Adjusted for UK keyboard
-                '~' to KeyMapping(KeyEvent.VK_BACK_QUOTE, needsShift = true),
-                '`' to KeyMapping(KeyEvent.VK_BACK_QUOTE),
-                '-' to KeyMapping(KeyEvent.VK_MINUS),
-                '=' to KeyMapping(KeyEvent.VK_EQUALS),
-                '[' to KeyMapping(KeyEvent.VK_OPEN_BRACKET),
-                ']' to KeyMapping(KeyEvent.VK_CLOSE_BRACKET)
-            ),
-        )
+        private val localeKeyMap: Map<Locale, Map<Char, KeyMapping>> =
+            mapOf(
+                Locale.US to
+                    mapOf(
+                        ':' to KeyMapping(KeyEvent.VK_SEMICOLON, needsShift = true),
+                        ';' to KeyMapping(KeyEvent.VK_SEMICOLON),
+                        '!' to KeyMapping(KeyEvent.VK_1, needsShift = true),
+                        '@' to KeyMapping(KeyEvent.VK_2, needsShift = true),
+                        '#' to KeyMapping(KeyEvent.VK_3, needsShift = true),
+                        '$' to KeyMapping(KeyEvent.VK_4, needsShift = true),
+                        '%' to KeyMapping(KeyEvent.VK_5, needsShift = true),
+                        '^' to KeyMapping(KeyEvent.VK_6, needsShift = true),
+                        '&' to KeyMapping(KeyEvent.VK_7, needsShift = true),
+                        '*' to KeyMapping(KeyEvent.VK_8, needsShift = true),
+                        '(' to KeyMapping(KeyEvent.VK_9, needsShift = true),
+                        ')' to KeyMapping(KeyEvent.VK_0, needsShift = true),
+                        '_' to KeyMapping(KeyEvent.VK_MINUS, needsShift = true),
+                        '+' to KeyMapping(KeyEvent.VK_EQUALS, needsShift = true),
+                        '{' to KeyMapping(KeyEvent.VK_BRACELEFT, needsShift = true),
+                        '}' to KeyMapping(KeyEvent.VK_BRACERIGHT, needsShift = true),
+                        '|' to KeyMapping(KeyEvent.VK_BACK_SLASH, needsShift = true),
+                        '<' to KeyMapping(KeyEvent.VK_COMMA, needsShift = true),
+                        '>' to KeyMapping(KeyEvent.VK_PERIOD, needsShift = true),
+                        '?' to KeyMapping(KeyEvent.VK_SLASH, needsShift = true),
+                        '"' to KeyMapping(KeyEvent.VK_QUOTE, needsShift = true), // Adjusted for US keyboard
+                        '~' to KeyMapping(KeyEvent.VK_BACK_QUOTE, needsShift = true),
+                        '`' to KeyMapping(KeyEvent.VK_BACK_QUOTE),
+                        '-' to KeyMapping(KeyEvent.VK_MINUS),
+                        '=' to KeyMapping(KeyEvent.VK_EQUALS),
+                        '[' to KeyMapping(KeyEvent.VK_OPEN_BRACKET),
+                        ']' to KeyMapping(KeyEvent.VK_CLOSE_BRACKET),
+                        // Additional characters and locales would be similar
+                    ),
+                Locale.UK to
+                    mapOf(
+                        // Adjust these mappings for the UK keyboard if they differ
+                        ':' to KeyMapping(KeyEvent.VK_SEMICOLON, needsShift = true),
+                        ';' to KeyMapping(KeyEvent.VK_SEMICOLON),
+                        '!' to KeyMapping(KeyEvent.VK_1, needsShift = true),
+                        '@' to KeyMapping(KeyEvent.VK_QUOTE, needsShift = true), // Adjusted for UK keyboard
+                        '£' to KeyMapping(KeyEvent.VK_3, needsShift = true), // NOT on US keyboard
+                        '#' to KeyMapping(KeyEvent.VK_NUMBER_SIGN), // No shift needed for UK
+                        '$' to KeyMapping(KeyEvent.VK_4, needsShift = true),
+                        '%' to KeyMapping(KeyEvent.VK_5, needsShift = true),
+                        '^' to KeyMapping(KeyEvent.VK_6, needsShift = true),
+                        '&' to KeyMapping(KeyEvent.VK_7, needsShift = true),
+                        '*' to KeyMapping(KeyEvent.VK_8, needsShift = true),
+                        '(' to KeyMapping(KeyEvent.VK_9, needsShift = true),
+                        ')' to KeyMapping(KeyEvent.VK_0, needsShift = true),
+                        '_' to KeyMapping(KeyEvent.VK_MINUS, needsShift = true),
+                        '+' to KeyMapping(KeyEvent.VK_EQUALS, needsShift = true),
+                        '{' to KeyMapping(KeyEvent.VK_BRACELEFT, needsShift = true),
+                        '}' to KeyMapping(KeyEvent.VK_BRACERIGHT, needsShift = true),
+                        '|' to KeyMapping(KeyEvent.VK_BACK_SLASH, needsShift = true),
+                        '<' to KeyMapping(KeyEvent.VK_COMMA, needsShift = true),
+                        '>' to KeyMapping(KeyEvent.VK_PERIOD, needsShift = true),
+                        '?' to KeyMapping(KeyEvent.VK_SLASH, needsShift = true),
+                        '"' to KeyMapping(KeyEvent.VK_2, needsShift = true), // Adjusted for UK keyboard
+                        '~' to KeyMapping(KeyEvent.VK_BACK_QUOTE, needsShift = true),
+                        '`' to KeyMapping(KeyEvent.VK_BACK_QUOTE),
+                        '-' to KeyMapping(KeyEvent.VK_MINUS),
+                        '=' to KeyMapping(KeyEvent.VK_EQUALS),
+                        '[' to KeyMapping(KeyEvent.VK_OPEN_BRACKET),
+                        ']' to KeyMapping(KeyEvent.VK_CLOSE_BRACKET),
+                    ),
+            )
     }
 
     /**
@@ -243,14 +250,17 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      *
      * @param commands A list of commands to process.
      */
-    override suspend fun sendCommandData(commands: List<String>) {
+    override suspend fun sendCommandData(
+        commands: List<String>,
+        commandEventContext: CommandEventContext,
+    ) {
         commands.forEach { line ->
             val lowerCaseLine = line.lowercase()
 
             // Don't process commands if paused
             if (isPaused) {
                 log.info("System is paused. Command queued but not sent: $line")
-                return  // Skip command execution while paused
+                return // Skip command execution while paused
             }
 
             try {
@@ -259,8 +269,8 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
                         lowerCaseLine.startsWith(KeyboardCommand.LOREM.lc) -> {
                             val newLines =
                                 lowerCaseLine.startsWith(KeyboardCommand.LOREM_LINES.txt) ||
-                                        lowerCaseLine.startsWith(KeyboardCommand.LOREM_LINES_B.txt) ||
-                                        lowerCaseLine.startsWith(KeyboardCommand.LOREM_LINES_C.txt)
+                                    lowerCaseLine.startsWith(KeyboardCommand.LOREM_LINES_B.txt) ||
+                                    lowerCaseLine.startsWith(KeyboardCommand.LOREM_LINES_C.txt)
                             loremIpsum.forEach { loremIpsumLine ->
                                 typeTextLine(robot!!, loremIpsumLine, newLines)
                             }
@@ -289,9 +299,10 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
 
                         lowerCaseLine.startsWith(KeyboardCommand.COMBO.lc) -> {
                             val combo = line.substringAfter(KeyboardCommand.COMBO.lc).trim()
-                            val keys = combo.split("-").map { key ->
-                                keyMap[key] ?: throw IllegalArgumentException("Key not found: $key")
-                            }
+                            val keys =
+                                combo.split("-").map { key ->
+                                    keyMap[key] ?: throw IllegalArgumentException("Key not found: $key")
+                                }
                             // Press each key in the combo
                             keys.forEach {
                                 if (appConfig.keyboard.output) {
@@ -364,7 +375,11 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      * @param keyCode The key code of the key to press and release.
      * @param debugKey A string used for logging/debugging purposes.
      */
-    private suspend fun processKeyEvent(robot: Robot, keyCode: Int, debugKey: String) {
+    private suspend fun processKeyEvent(
+        robot: Robot,
+        keyCode: Int,
+        debugKey: String,
+    ) {
         if (appConfig.keyboard.output) {
             robot.keyPress(keyCode)
             delay(50)
@@ -383,7 +398,11 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      * @param text The text to type.
      * @param addReturnChar If true, adds a return character at the end of the line.
      */
-    private suspend fun typeTextLine(robot: Robot, text: String, addReturnChar: Boolean) {
+    private suspend fun typeTextLine(
+        robot: Robot,
+        text: String,
+        addReturnChar: Boolean,
+    ) {
         text.forEach { char ->
             if (isStopped) return
 
@@ -432,9 +451,10 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      * @param locale The locale to check for character mappings (defaults to the system's locale).
      * @return True if the character requires a special mapping; false otherwise.
      */
-    fun isLocalizedChar(char: Char, locale: Locale = Locale.getDefault()): Boolean {
-        return getLocalizedCharMapping(char, locale) != null
-    }
+    fun isLocalizedChar(
+        char: Char,
+        locale: Locale = Locale.getDefault(),
+    ): Boolean = getLocalizedCharMapping(char, locale) != null
 
     /**
      * Retrieves the key mapping for a localized character, if available.
@@ -443,9 +463,10 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      * @param locale The locale to check for character mappings (defaults to the system's locale).
      * @return A `KeyMapping` if the character has a special mapping; null otherwise.
      */
-    fun getLocalizedCharMapping(char: Char, locale: Locale = Locale.getDefault()): KeyMapping? {
-        return localeKeyMap[locale]?.get(char)
-    }
+    fun getLocalizedCharMapping(
+        char: Char,
+        locale: Locale = Locale.getDefault(),
+    ): KeyMapping? = localeKeyMap[locale]?.get(char)
 
     /**
      * Types a special character by pressing and releasing the necessary modifier keys (e.g., Shift or AltGr).
@@ -454,7 +475,11 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
      * @param key The key mapping for the special character.
      * @param char The character being typed (for logging/debugging purposes).
      */
-    private suspend fun typeSpecialChar(robot: Robot, key: KeyMapping, char: Char) {
+    private suspend fun typeSpecialChar(
+        robot: Robot,
+        key: KeyMapping,
+        char: Char,
+    ) {
         if (appConfig.keyboard.output) {
             if (key.needsShift) robot.keyPress(KeyEvent.VK_SHIFT)
             if (key.needsAltGr) robot.keyPress(KeyEvent.VK_ALT_GRAPH)
@@ -468,10 +493,11 @@ class LocalRobotKeyboardService(val appConfig: AppConfig) : KeyboardInterface {
         }
     }
 
-    private val loremIpsum = listOf(
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ",
-        "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. ",
-        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. ",
-        "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-    )
+    private val loremIpsum =
+        listOf(
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ",
+            "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. ",
+            "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. ",
+            "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+        )
 }

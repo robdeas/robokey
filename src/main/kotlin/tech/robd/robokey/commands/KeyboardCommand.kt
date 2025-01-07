@@ -26,7 +26,9 @@ package tech.robd.robokey.commands
  * The LOREM_LINES_B ... is a way of allowing different separators in the commands.
  * There are not likely to be many, as more sophisticated commands are handled in the arduino code
  */
-enum class KeyboardCommand(val textValue: String) {
+enum class KeyboardCommand(
+    val textValue: String,
+) {
     PING("ping"),
     LOREM("lorem"),
     LOREM_LINES("lorem_lines"),
@@ -47,14 +49,10 @@ enum class KeyboardCommand(val textValue: String) {
     val lc: String
         get() = textValue.lowercase()
 
-    override fun toString(): String {
-        return textValue
-    }
+    override fun toString(): String = textValue
 
     companion object {
         // Function to get a list of all textValues
-        fun getAllTextValues(): List<String> {
-            return PriorityKeyboardCommand.entries.map { it.textValue }
-        }
+        fun getAllTextValues(): List<String> = PriorityKeyboardCommand.entries.map { it.textValue }
     }
 }

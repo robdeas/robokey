@@ -17,7 +17,8 @@
  */
 package tech.robd.robokey.tasks
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -37,8 +38,9 @@ import java.util.concurrent.ConcurrentHashMap
  * @param scope The `CoroutineScope` within which all tasks are launched. This scope ensures structured concurrency and proper
  * lifecycle management for all tasks managed by the `TaskPoolManager`.
  */
-class TaskPoolManager(private val scope: CoroutineScope) {
-
+class TaskPoolManager(
+    private val scope: CoroutineScope,
+) {
     /**
      * A thread-safe map that tracks tasks by their names. The task name (`TaskName`) serves as the key, and
      * each task is represented by a `NamedCancellableTask`.
@@ -58,10 +60,13 @@ class TaskPoolManager(private val scope: CoroutineScope) {
      * @param name The unique name of the task, which is used to track and manage it.
      * @param taskLogic The suspending function that represents the task's logic, executed asynchronously.
      */
-    fun submitTask(name: TaskName, taskLogic: suspend () -> Unit) {
+    fun submitTask(
+        name: TaskName,
+        taskLogic: suspend () -> Unit,
+    ) {
         val task = NamedCancellableTask(name, taskLogic)
-        task.start(scope)  // Start the task in the provided coroutine scope
-        tasks[name] = task  // Store the task in the map
+        task.start(scope) // Start the task in the provided coroutine scope
+        tasks[name] = task // Store the task in the map
     }
 
     /**
@@ -73,7 +78,7 @@ class TaskPoolManager(private val scope: CoroutineScope) {
      * @param name The name of the task to cancel.
      */
     fun cancelTask(name: TaskName) {
-        tasks[name]?.cancel()  // Cancel the task if it exists
+        tasks[name]?.cancel() // Cancel the task if it exists
     }
 
     /**
@@ -85,11 +90,14 @@ class TaskPoolManager(private val scope: CoroutineScope) {
      * @param name The name of the task to restart.
      * @param taskLogic The suspending function representing the task's logic, which will be restarted or submitted if the task doesn't exist.
      */
-    fun restartTask(name: TaskName, taskLogic: suspend () -> Unit) {
+    fun restartTask(
+        name: TaskName,
+        taskLogic: suspend () -> Unit,
+    ) {
         tasks[name]?.restart(scope) ?: submitTask(
             name,
-            taskLogic
-        )  // Restart the task if it exists; otherwise, submit a new one
+            taskLogic,
+        ) // Restart the task if it exists; otherwise, submit a new one
     }
 
     /**
@@ -100,7 +108,7 @@ class TaskPoolManager(private val scope: CoroutineScope) {
      * @return A `Set` of `TaskName` objects representing the names of all tracked tasks.
      */
     fun getTaskNames(): Set<TaskName> {
-        return tasks.keys  // Return the set of task names
+        return tasks.keys // Return the set of task names
     }
 
     /**
@@ -110,7 +118,7 @@ class TaskPoolManager(private val scope: CoroutineScope) {
      * all tasks, the provided `CoroutineScope` is also canceled, ensuring that no more tasks can be started.
      */
     fun shutdown() {
-        tasks.values.forEach { it.cancel() }  // Cancel all tasks
-        scope.cancel()  // Cancel the coroutine scope to stop further task execution
+        tasks.values.forEach { it.cancel() } // Cancel all tasks
+        scope.cancel() // Cancel the coroutine scope to stop further task execution
     }
 }

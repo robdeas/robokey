@@ -54,19 +54,3 @@ inline val <reified T : Logable> T.setupLogs: Logger
         val enclosingClass = clazz.enclosingClass
         return LoggerFactory.getLogger(enclosingClass ?: clazz)
     }
-
-/**
- * Marker interface for classes that require logging.
- *
- * Any class that implements the `Logable` interface can use the `setupLogs` property to create and initialize an SLF4J logger.
- * This interface does not define any methods; it serves as a marker to indicate that a class supports logging through the `setupLogs` utility.
- *
- * ### Example:
- * ```
- * class MyClass : Logable {
- *     private val log = setupLogs
- * }
- * ```
- * In this example, `MyClass` implements `Logable`, which allows it to use `setupLogs` to easily initialize a logger.
- */
-interface Logable

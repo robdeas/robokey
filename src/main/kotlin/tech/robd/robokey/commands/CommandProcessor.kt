@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.  
  */
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package tech.robd.robokey.commands
 
 import kotlinx.coroutines.*
@@ -22,6 +24,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import tech.robd.robokey.AppConfig
 import tech.robd.robokey.Logable
+import tech.robd.robokey.events.EventGroup
 import tech.robd.robokey.keyboards.ArduinoCommand
 import tech.robd.robokey.keyboards.ArduinoService
 import tech.robd.robokey.keyboards.KeyboardInterface
@@ -43,7 +46,7 @@ import tech.robd.robokey.setupLogs
  */
 class CommandProcessor(
     internal val keyboardService: KeyboardInterface,
-    private val appConfig: AppConfig
+    private val appConfig: AppConfig,
 ) {
     companion object : Logable {
         private val log = setupLogs
@@ -52,7 +55,7 @@ class CommandProcessor(
     /**
      * A `Channel` for queuing commands. This channel has an unlimited buffer, meaning commands will be queued until processed.
      */
-    private val commandChannel = Channel<String>(Channel.UNLIMITED)
+    private val commandChannel = Channel<Pair<String, EventGroup>>(Channel.UNLIMITED)
 
     /**
      * A list of commands that can interrupt queued commands. These commands have higher priority and are processed immediately.
@@ -82,9 +85,12 @@ class CommandProcessor(
      *
      * @param command The command to enqueue for processing.
      */
-    suspend fun enqueueCommand(command: String) {
+    suspend fun enqueueCommand(
+        command: String,
+        parentEventContext: EventGroup,
+    ) {
         log.info("Enqueuing command: $command")
-        commandChannel.send(command)
+        commandChannel.send(Pair(command, parentEventContext))
     }
 
     /**
@@ -95,12 +101,12 @@ class CommandProcessor(
      */
     private fun processCommands() {
         scope.launch {
-            for (command in commandChannel) {
+            for ((command, parentEventContext) in commandChannel) {
                 log.info("Processing queued command: $command")
                 if (immediateCommands.contains(command.uppercase())) {
-                    handleImmediateCommand(command)
+                    handleImmediateCommand(command, parentEventContext)
                 } else {
-                    handleQueuedCommand(command)
+                    handleQueuedCommand(command, parentEventContext)
                 }
             }
         }
@@ -114,7 +120,10 @@ class CommandProcessor(
      *
      * @param command The queued command to be processed.
      */
-    private suspend fun handleQueuedCommand(command: String) {
+    private suspend fun handleQueuedCommand(
+        command: String,
+        eventGroup: EventGroup,
+    ) {
         if (isStopped) {
             log.info("System is stopped. Ignoring command: $command")
             return
@@ -126,16 +135,18 @@ class CommandProcessor(
         }
 
         // Assign timeouts based on command type
-        val commandTimeout = when {
-            command.startsWith("CMD_SET_PRESS_LENGTH") -> 1000L
-            command.startsWith("lorem") -> 5000L // Longer timeout for large text
-            else -> 3000L
-        }
+        val commandTimeout =
+            when {
+                command.startsWith("CMD_SET_PRESS_LENGTH") -> 1000L
+                command.startsWith("lorem") -> 5000L // Longer timeout for large text
+                else -> 3000L
+            }
 
         try {
-            val arduinoCommand = ArduinoCommand(command, commandTimeout)
+            val arduinoCommand = ArduinoCommand(command, commandTimeout, eventGroup)
             log.debug("Sending command to keyboard with timeout [$commandTimeout]: $command")
-            (keyboardService as? ArduinoService)?.sendRawDataToArduino(appConfig.comPort!!, listOf(arduinoCommand))
+            (keyboardService as? ArduinoService)
+                ?.sendRawDataToArduino(appConfig.comPort!!, listOf(arduinoCommand))
                 ?.awaitSingleOrNull()
             log.info("Command successfully sent: $command")
         } catch (e: Exception) {
@@ -151,7 +162,10 @@ class CommandProcessor(
      *
      * @param command The immediate command to be processed.
      */
-    private suspend fun handleImmediateCommand(command: String) {
+    private suspend fun handleImmediateCommand(
+        command: String,
+        parentEventContext: EventGroup,
+    ) {
         log.info("Processing immediate command: $command")
         when (command.uppercase()) {
             "STOP" -> {
@@ -159,7 +173,7 @@ class CommandProcessor(
                 setIsStopped(true)
                 clearCommandQueue()
                 if (keyboardService is ArduinoService) {
-                    val stopCommand = ArduinoCommand("CMD:STOP", 1000)
+                    val stopCommand = ArduinoCommand("CMD:STOP", 1000, parentEventContext)
                     keyboardService.sendRawDataToArduino(appConfig.comPort!!, listOf(stopCommand)).awaitSingleOrNull()
                     log.info("Stop command successfully sent to Arduino.")
                     delay(500)
@@ -171,8 +185,9 @@ class CommandProcessor(
                     is ArduinoService -> {
                         log.info("Sending reset command to Arduino.")
                         try {
-                            val resetCommand = ArduinoCommand("CMD:RESET", 1000)
-                            keyboardService.sendRawDataToArduino(appConfig.comPort!!, listOf(resetCommand))
+                            val resetCommand = ArduinoCommand("CMD:RESET", 1000, parentEventContext)
+                            keyboardService
+                                .sendRawDataToArduino(appConfig.comPort!!, listOf(resetCommand))
                                 .awaitSingleOrNull()
                             log.info("Reset command successfully sent to Arduino.")
                         } catch (e: Exception) {
@@ -203,7 +218,7 @@ class CommandProcessor(
                 log.info("Pausing operation.")
                 isPaused = true
                 if (keyboardService is ArduinoService) {
-                    val pauseCommand = ArduinoCommand("CMD:PAUSE", 1000)  // Send pause command to Arduino
+                    val pauseCommand = ArduinoCommand("CMD:PAUSE", 1000, parentEventContext) // Send pause command to Arduino
                     keyboardService.sendRawDataToArduino(appConfig.comPort!!, listOf(pauseCommand)).awaitSingleOrNull()
                     log.info("Pause command successfully sent to Arduino.")
                 }
@@ -241,7 +256,9 @@ class CommandProcessor(
         isStopped = stopped
         if (stopped) {
             if (keyboardService is ArduinoService) {
-                log.info("Arduino service needs to stop. (It will only handle priority commands to allow the Arduino to receive the stop command.)")
+                log.info(
+                    "Arduino service needs to stop. (It will only handle priority commands to allow the Arduino to receive the stop command.)",
+                )
             }
             keyboardService.stopAndClearQueue()
         } else {
@@ -260,5 +277,6 @@ class CommandProcessor(
 
     // Utility functions to check the type of keyboard service in use
     fun isUsingArduino() = keyboardService is ArduinoService
+
     fun isUsingLocalRobot() = keyboardService is LocalRobotKeyboardService
 }

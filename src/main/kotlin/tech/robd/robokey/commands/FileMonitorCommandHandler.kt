@@ -15,18 +15,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.  
  */
+@file:Suppress("ktlint:standard:no-wildcard-imports")
+
 package tech.robd.robokey.commands
 
 import kotlinx.coroutines.*
 import org.springframework.stereotype.Component
 import tech.robd.robokey.*
+import tech.robd.robokey.events.EventSourceActor
+import tech.robd.robokey.events.EventsProvider
 import tech.robd.robokey.tasks.TaskPoolManager
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
-import java.nio.file.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardWatchEventKinds
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -43,8 +50,8 @@ class FileMonitorCommandHandler(
     private val appConfig: AppConfig,
     private val commandProcessorService: CommandProcessorService,
     private val systemExitHandler: SystemExitHandler,
+    private val eventGroupProvider: EventsProvider,
 ) {
-
     companion object : Logable {
         private val log = setupLogs
     }
@@ -56,13 +63,14 @@ class FileMonitorCommandHandler(
      */
     fun start() {
         val filePath = appConfig.fileWatcher.winFilePath
-        monitoringJob = CoroutineScope(Dispatchers.IO).launch {
-            try {
-                monitorFile(filePath)
-            } catch (e: Exception) {
-                log.error("Exception occurred while monitoring file", e)
+        monitoringJob =
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    monitorFile(filePath)
+                } catch (e: Exception) {
+                    log.error("Exception occurred while monitoring file", e)
+                }
             }
-        }
     }
 
     /**
@@ -119,7 +127,7 @@ class FileMonitorCommandHandler(
                 try {
                     path.parent.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
 
-                    while (coroutineContext.isActive) {  // Keep monitoring as long as coroutine is active
+                    while (coroutineContext.isActive) { // Keep monitoring as long as coroutine is active
                         val key = watchService.take()
                         for (event in key.pollEvents()) {
                             if (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY &&
@@ -128,14 +136,14 @@ class FileMonitorCommandHandler(
                                 var line: String?
                                 while (reader.readLine().also { line = it } != null) {
                                     log.info("New line added: $line , characters=${Utils.getByteValuesAsHexString(line!!)}")
-                                    handleCommand(command = line!!)  // Process the new line as a command
+                                    handleCommand(command = line!!) // Process the new line as a command
                                 }
                             }
                         }
-                        key.reset()  // Reset the watch key to continue receiving events
+                        key.reset() // Reset the watch key to continue receiving events
                     }
                 } catch (e: InterruptedException) {
-                    Thread.currentThread().interrupt()  // Handle interruption properly
+                    Thread.currentThread().interrupt() // Handle interruption properly
                     log.error("File monitoring interrupted.", e)
                 } finally {
                     watchService.close()
@@ -157,7 +165,10 @@ class FileMonitorCommandHandler(
         log.info("Detected charset: $detectedCharset")
 
         return runCatching {
-            val requestedCharset = appConfig.fileWatcher.charset.uppercase().trim()
+            val requestedCharset =
+                appConfig.fileWatcher.charset
+                    .uppercase()
+                    .trim()
             if (requestedCharset != "AUTO") {
                 if (Charset.availableCharsets().containsKey(requestedCharset)) {
                     log.info("Using configured charset: $requestedCharset")
@@ -182,7 +193,10 @@ class FileMonitorCommandHandler(
      * @return The fallback charset to be used.
      */
     private fun getFallbackCharset(): Charset {
-        val fallbackCharset = appConfig.fileWatcher.fallBackCharset.uppercase().trim()
+        val fallbackCharset =
+            appConfig.fileWatcher.fallBackCharset
+                .uppercase()
+                .trim()
         return if (fallbackCharset != "AUTO") {
             runCatching {
                 Charset.forName(fallbackCharset)
@@ -211,7 +225,14 @@ class FileMonitorCommandHandler(
 
             else -> {
                 // Forward regular commands to the CommandProcessorService
-                commandProcessorService.getCommandProcessor().enqueueCommand(command)
+
+                commandProcessorService.getCommandProcessor().enqueueCommand(
+                    command,
+                    eventGroupProvider.createRootParentEventContext(
+                        eventSourceActor = EventSourceActor.FILE_WATCHER,
+                        eventValue = command,
+                    ),
+                )
             }
         }
     }

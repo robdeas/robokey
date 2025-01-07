@@ -17,17 +17,17 @@
  */
 package tech.robd.robokey
 
-import tech.robd.robokey.commands.ConsoleCommandHandler
-import tech.robd.robokey.commands.FileMonitorCommandHandler
-import tech.robd.robokey.tasks.TaskName
-import tech.robd.robokey.tasks.TaskPoolManager
+import jakarta.annotation.PreDestroy
+import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
+import tech.robd.robokey.commands.ConsoleCommandHandler
+import tech.robd.robokey.commands.FileMonitorCommandHandler
+import tech.robd.robokey.tasks.TaskName
+import tech.robd.robokey.tasks.TaskPoolManager
 import java.awt.GraphicsEnvironment
-import jakarta.annotation.PreDestroy
-import org.slf4j.LoggerFactory
 
 /**
  * The main entry point of the Robokey application.
@@ -49,7 +49,7 @@ class RobokeyApplication(
     private val swingMainWindow: SwingMainWindow,
     private val consoleCommandHandler: ConsoleCommandHandler,
     private val fileMonitorCommandHandler: FileMonitorCommandHandler,
-    private val taskPoolManager: TaskPoolManager
+    private val taskPoolManager: TaskPoolManager,
 ) {
     companion object : Logable {
         private val log = setupLogs
@@ -73,35 +73,35 @@ class RobokeyApplication(
      * @return An `ApplicationRunner` that is executed on application startup.
      */
     @Bean
-    fun runOnStartup() = ApplicationRunner {
+    fun runOnStartup() =
+        ApplicationRunner {
+            log.info("Application starting up...")
 
-        log.info("Application starting up...")
+            // Attempt to display the GUI if not running in headless mode
+            if (GraphicsEnvironment.isHeadless()) {
+                log.warn("Headless environment detected. Attempting to override to false.")
+                System.setProperty("java.awt.headless", "false")
+            }
 
-        // Attempt to display the GUI if not running in headless mode
-        if (GraphicsEnvironment.isHeadless()) {
-            log.warn("Headless environment detected. Attempting to override to false.")
-            System.setProperty("java.awt.headless", "false")
+            if (!GraphicsEnvironment.isHeadless()) {
+                log.info("Displaying GUI...")
+                swingMainWindow.createAndShowGUI()
+            } else {
+                log.warn("Headless environment detected. GUI will not be displayed.")
+            }
+
+            // Start the console command handler if enabled
+            if (appConfig.consoleCommands) {
+                log.info("Starting console commands handler...")
+                taskPoolManager.submitTask(TaskName.CONSOLE_COMMANDS) { consoleCommandHandler.start() }
+            }
+
+            // Start the file monitoring service if enabled
+            if (appConfig.fileWatcher.enabled) {
+                log.info("Starting file monitor...")
+                taskPoolManager.submitTask(TaskName.FILE_MONITOR) { fileMonitorCommandHandler.start() }
+            }
         }
-
-        if (!GraphicsEnvironment.isHeadless()) {
-            log.info("Displaying GUI...")
-            swingMainWindow.createAndShowGUI()
-        } else {
-            log.warn("Headless environment detected. GUI will not be displayed.")
-        }
-
-        // Start the console command handler if enabled
-        if (appConfig.consoleCommands) {
-            log.info("Starting console commands handler...")
-            taskPoolManager.submitTask(TaskName.CONSOLE_COMMANDS) { consoleCommandHandler.start() }
-        }
-
-        // Start the file monitoring service if enabled
-        if (appConfig.fileWatcher.enabled) {
-            log.info("Starting file monitor...")
-            taskPoolManager.submitTask(TaskName.FILE_MONITOR) { fileMonitorCommandHandler.start() }
-        }
-    }
 
     /**
      * Cleans up resources and shuts down tasks when the application is terminated.
